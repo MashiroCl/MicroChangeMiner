@@ -62,7 +62,7 @@ public class MineCommand implements Callable<Integer> {
         Map<String, List<DiffEditScriptMapping>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
 
         PatternMatcher patternMatcherGumTree = new PatternMatcherGumTree();
-        patternMatcherGumTree.addMicroChange(new ReverseConditional());
+        patternMatcherGumTree.addMicroChange(new ReverseThenElse());
         patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
         patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
         patternMatcherGumTree.addMicroChange(new SemantiacllySameConditionUpdate());

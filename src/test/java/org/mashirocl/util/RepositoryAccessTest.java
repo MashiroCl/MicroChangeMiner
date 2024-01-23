@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.match.PatternMatcher;
 import org.mashirocl.microchange.MicroChangePattern;
-import org.mashirocl.microchange.ReverseConditional;
+import org.mashirocl.microchange.ReverseThenElse;
 import org.mashirocl.source.SourcePair;
 
 
@@ -146,7 +146,7 @@ class RepositoryAccessTest {
         EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator();
         EditScript actions = editScriptGenerator.computeActions(mappings);
 
-        MicroChangePattern reverseConditional = new ReverseConditional();
+        MicroChangePattern reverseConditional = new ReverseThenElse();
         PatternMatcher patternMatcher = new PatternMatcherGumTree();
         patternMatcher.addMicroChange(reverseConditional);
 

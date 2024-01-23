@@ -8,7 +8,7 @@ import org.mashirocl.editscript.DiffEditScriptMapping;
 import org.mashirocl.match.PatternMatcher;
 import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.microchange.MicroChangePattern;
-import org.mashirocl.microchange.ReverseConditional;
+import org.mashirocl.microchange.ReverseThenElse;
 import org.mashirocl.editscript.EditScriptExtractor;
 import org.mashirocl.util.RepositoryAccess;
 
@@ -41,7 +41,7 @@ public class Main {
 //                        .filter(diffEditScript -> diffEditScript.getDiffEntry().getChangeType().equals(DiffEntry.ChangeType.MODIFY))
 //                        .collect(Collectors.toList()));
 
-        MicroChangePattern reverseConditional = new ReverseConditional();
+        MicroChangePattern reverseConditional = new ReverseThenElse();
         PatternMatcher patternMatcherGumTree = new PatternMatcherGumTree();
         patternMatcherGumTree.addMicroChange(reverseConditional);
 

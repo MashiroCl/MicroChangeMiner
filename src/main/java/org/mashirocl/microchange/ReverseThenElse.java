@@ -4,16 +4,14 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.Tree;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author mashirocl@gmail.com
  * @since 2024/01/10 9:18
  */
-public class ReverseConditional implements MicroChangePattern {
+public class ReverseThenElse implements MicroChangePattern {
 
     /**
      * condition:
