@@ -12,9 +12,9 @@ import java.util.Map;
 public class ConditionalToSwitch implements MicroChangePattern{
     /**
      * condition
-     * 1. action node is `insert-node`
-     * 2. target is `IfStatement`
-     * 3. except the first child (condition), children of `IfStatement` are the same before and after change
+     * 1. action node is `move-tree`
+     * 2. parent of the action node is  `xxExpression`, and parent of its parent is `IfStatement`
+     * 3.move target is `SwitchStatement`
      * @param action
      * @param mappings
      * @return
