@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,7 +53,7 @@ public class MicroChangeWriter {
      * @param inputPath json file path
      * @param outputPath csv file path
      */
-    public static void writeCsv(String inputPath, String outputPath){
+    public static void writeCsv(String inputPath, String outputPath, URL link){
         log.info("read from {} and write to {}", inputPath, outputPath);
         try( CSVWriter csvWriter = new CSVWriter(new FileWriter(outputPath))){
             ObjectMapper objectMapper = new ObjectMapper();
@@ -64,7 +65,7 @@ public class MicroChangeWriter {
                     p-> {
                         String[] data = {
                                 p.getRepository(),
-                                p.getCommitID(),
+                                LinkAttacher.attachLink(p.getCommitID(), link.toString()),
                                 p.getMicroChange().getType(),
                                 p.getOldPath(),
                                 p.getNewPath(),
@@ -102,7 +103,7 @@ public class MicroChangeWriter {
                     p-> {
                         String[] data = {
                                 p.getRepository(),
-                                commitMapper.getMap().getOrDefault( p.getCommitID(), "no mapping found"),
+                                commitMapper.getMap().getOrDefault( p.getCommitID(),"no-mapping-found"),
                                 p.getMicroChange().getType(),
                                 p.getOldPath(),
                                 p.getNewPath(),
@@ -115,5 +116,14 @@ public class MicroChangeWriter {
         }
     }
 
+    /**
+     * convert the method-level commit hash to original hash
+     * @param commitID
+     * @return
+     */
+    public static String convertCommit(String commitID, String repository, CommitMapper commitMapper){
+        return LinkAttacher.attachLink( commitMapper.getMap().getOrDefault( commitID, "no-mapping-found"),
+                LinkAttacher.searchLink(repository));
+    }
 
 }

@@ -12,12 +12,14 @@ import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.microchange.*;
 import org.mashirocl.editscript.EditScriptExtractor;
 import org.mashirocl.util.CommitMapper;
+import org.mashirocl.util.LinkAttacher;
 import org.mashirocl.util.MicroChangeWriter;
 import org.mashirocl.util.RepositoryAccess;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,14 +67,15 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ReverseThenElse());
         patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
         patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
-        patternMatcherGumTree.addMicroChange(new SemantiacllySameConditionUpdate());
+        patternMatcherGumTree.addMicroChange(new SemanticallySameConditionUpdate());
         patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
         patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
+        patternMatcherGumTree.addMicroChange(new ReverseConditional());
 
 
         List<MinedMicroChange> minedMicroChanges = new LinkedList<>();
         for (String commitID : res.keySet()) {
-//            if(!commitID.contains("33203c04ee9f7fc54fffe544f9bed631f51bfd2e")) continue;
+//            if(!commitID.contains("c907b7953e58009a622f4dbfd527187d60acac60")) continue;
             for (DiffEditScriptMapping diffEditScript : res.get(commitID)) {
                 EditScript editScript = diffEditScript.getDiffEditScript().getEditScript();
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(diffEditScript.getEditScriptMapping().getMappingStore());
@@ -90,7 +93,7 @@ public class MineCommand implements Callable<Integer> {
             }
         }
 
-        if(!config.commitMap.isEmpty()){
+        if(config.commitMap!=null){
             log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
             CommitMapper commitMapper = new CommitMapper(config.commitMap);
             minedMicroChanges.forEach(p->p.setCommitID(commitMapper.getMap().get((p.getCommitID()))));
@@ -98,8 +101,8 @@ public class MineCommand implements Callable<Integer> {
 
         MicroChangeWriter.writeJson(minedMicroChanges, config.outputPath);
 
-        if(!config.csvPath.isEmpty()){
-            MicroChangeWriter.writeCsv(config.outputPath, config.csvPath);
+        if(config.csvPath!=null){
+            MicroChangeWriter.writeCsv(config.outputPath, config.csvPath, new URL(LinkAttacher.searchLink(repositoryName)));
         }
 //        minedMicroChanges.forEach(System.out::println);
         return 0;
