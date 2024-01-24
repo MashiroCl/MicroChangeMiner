@@ -9,7 +9,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/01/21 12:29
  */
-public class SemantiacllySameConditionUpdate implements MicroChangePattern{
+public class SemanticallySameConditionUpdate implements MicroChangePattern{
 
     /**
      * condition
