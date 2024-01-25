@@ -64,14 +64,18 @@ public class EditScriptExtractor {
         log.info("Computing edit script...");
         Map<String, List<DiffEditScriptMapping>> res = new HashMap<>();
         Iterable<RevCommit> walk = ra.walk(startCommitID, endCommitID);
-
         try {
             for (RevCommit commit : walk) {
                 if (commit.getParents().length == 0) continue;
                 RevTree newTree = commit.getTree();
                 RevTree oldTree = commit.getParent(0).getTree();
                 List<DiffEntry> diffEntryList = diffFormatter.scan(newTree, oldTree);
-//                List<DiffEditScript> diffEditScriptList = new LinkedList<>();
+                // skip the commits which are purely addition or deletion
+                if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
+                        || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
+                {
+                    continue;
+                }
                 List<DiffEditScriptMapping> diffEditScriptMappingList = new LinkedList<>();
 
                 for (DiffEntry diffEntry : diffEntryList) {
