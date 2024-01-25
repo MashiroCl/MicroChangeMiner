@@ -46,7 +46,7 @@ public class PatternMatcherGumTree implements PatternMatcher {
                 microChanges.add(MicroChange.of(pattern.getClass().getSimpleName(),
                         action.toString()));
                 System.out.println("Match found with pattern: "+pattern.getClass().getSimpleName());
-                System.out.println(action);
+//                System.out.println(action);
             }
         }
         return microChanges;
