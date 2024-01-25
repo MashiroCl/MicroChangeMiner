@@ -10,19 +10,23 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/01/19 15:19
  */
-public class RemoveRedudantElse {
+public class RemoveRedudantElse implements MicroChangePattern{
 
     /**
      * condition:
      * for one action in the edit script
-     * TODO design
+     * 1. is `delete-tree`
+     * 2. action.getnode() parent is `IfStatement`
+     * 3. action.getnode() is the 3rd child of the parent
      * @param action
      * @param mappings
      * @return
      */
-    public boolean matchConditionGumTree2(Action action, Map<Tree, Tree> mappings){
-        if(!action.getName().equals("move-tree"))
-            return false;
-        return false;
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings){
+        return action.getName().equals("delete-tree")
+                && action.getNode().getParent().getType().name.equals("IfStatement")
+                && action.getNode().getParent().getChildren().size()>1
+                && action.getNode().equals(action.getNode().getParent().getChild(2));
     }
 }
