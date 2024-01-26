@@ -27,13 +27,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MicroChangeWriter {
 
-    public static void main(String [] args) throws JsonProcessingException {
-        String jsonPath = "/Users/leichen/project/semantic_lifter/SemanticLifter/patternMatch/miner/mined/mbassador.json";
-        String csvPath = "/Users/leichen/project/semantic_lifter/SemanticLifter/patternMatch/miner/mined/mbassador.csv";
-        String commitMapPath = "/Users/leichen/project/semantic_lifter/SemanticLifter/patternMatch/miner/commitMap/mbassador.json";
-        writeCsv(jsonPath, csvPath, commitMapPath);
-    }
-
     public static void writeJson(List<MinedMicroChange> microChanges, String outputPath){
         log.info("Writing {} micro-changes to {}", microChanges.size(), outputPath);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -59,7 +52,7 @@ public class MicroChangeWriter {
             ObjectMapper objectMapper = new ObjectMapper();
             List<MinedMicroChange> microChanges = objectMapper.readValue(new File(inputPath), objectMapper.getTypeFactory().constructCollectionType(List.class, MinedMicroChange.class));
 
-            String [] header = {"Repository", "CommitID", "Type", "OldPath", "NewPath", "Action"};
+            String [] header = {"Repository", "CommitID", "Type", "ConfuMat" ,"OldPath", "NewPath", "Note", "Action"};
             csvWriter.writeNext(header);
             microChanges.forEach(
                     p-> {
@@ -67,9 +60,12 @@ public class MicroChangeWriter {
                                 p.getRepository(),
                                 LinkAttacher.attachLink(p.getCommitID(), link.toString()),
                                 p.getMicroChange().getType(),
+                                "",  // placeholder for confusion matrix
                                 p.getOldPath(),
                                 p.getNewPath(),
-                                p.getMicroChange().getAction()};
+                                "",  // placeholder for note
+                                p.getMicroChange().getAction()
+                        };
                         csvWriter.writeNext(data);
                     });
         }
@@ -85,6 +81,7 @@ public class MicroChangeWriter {
      * @param outputPath csv file path
      * @param commitMapPath commit map path
      */
+    @Deprecated
     public static void writeCsv(String inputPath, String outputPath, String commitMapPath){
         log.info("read from {} and write to {} using map {}", inputPath, outputPath, commitMapPath);
         File commitMapFile = new File(commitMapPath);
