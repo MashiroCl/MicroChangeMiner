@@ -1,7 +1,6 @@
 package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
-import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.Tree;
 
 import java.util.Map;
@@ -10,7 +9,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/01/19 15:19
  */
-public class RemoveRedudantElse implements MicroChangePattern{
+public class RemoveElse implements MicroChangePattern{
 
     /**
      * condition:
