@@ -13,7 +13,7 @@ public class DeleteConditionals implements MicroChangePattern{
     /**
      * is `move-tree`
      * action.getnode() parent is `IfStatement`
-     *  the parent after move is not `IfStatement`
+     *  the parent after move is `Block`
      * @param action
      * @param mappings
      * @return
@@ -23,6 +23,6 @@ public class DeleteConditionals implements MicroChangePattern{
         return action.getName().equals("move-tree")
                 && action.getNode().getParent().getParent().getType().name.equals("IfStatement")
                 && mappings.containsKey(action.getNode())
-                && !mappings.get(action.getNode()).getParent().getParent().getType().name.equals("IfStatement");
+                && mappings.get(action.getNode()).getParent().getParent().getType().name.equals("Block");
     }
 }
