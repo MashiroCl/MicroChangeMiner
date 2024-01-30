@@ -71,11 +71,16 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
         patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
         patternMatcherGumTree.addMicroChange(new ReverseConditional());
-
+        patternMatcherGumTree.addMicroChange(new ConditionalToTernaryOperator());
+        patternMatcherGumTree.addMicroChange(new RemoveElse());
+        patternMatcherGumTree.addMicroChange(new UnifyCondition());
+        patternMatcherGumTree.addMicroChange(new DeleteConditionals());
+        patternMatcherGumTree.addMicroChange(new ParallelCondition());
 
         List<MinedMicroChange> minedMicroChanges = new LinkedList<>();
         for (String commitID : res.keySet()) {
-//            if(!commitID.contains("c907b7953e58009a622f4dbfd527187d60acac60")) continue;
+//            if(!commitID.contains("6d8b71cc9688ba25292c4b31b7f1c1aa389106ba")) continue;
+//            System.out.println(commitID);
             for (DiffEditScriptMapping diffEditScript : res.get(commitID)) {
                 EditScript editScript = diffEditScript.getDiffEditScript().getEditScript();
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(diffEditScript.getEditScriptMapping().getMappingStore());
