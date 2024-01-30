@@ -52,7 +52,7 @@ public class MicroChangeWriter {
             ObjectMapper objectMapper = new ObjectMapper();
             List<MinedMicroChange> microChanges = objectMapper.readValue(new File(inputPath), objectMapper.getTypeFactory().constructCollectionType(List.class, MinedMicroChange.class));
 
-            String [] header = {"Repository", "CommitID", "Type", "ConfuMat" ,"OldPath", "NewPath", "Note", "Action"};
+            String [] header = {"Repository", "CommitID", "Type", "Review" ,"OldPath", "NewPath", "Note", "Action"};
             csvWriter.writeNext(header);
             microChanges.forEach(
                     p-> {
@@ -60,7 +60,7 @@ public class MicroChangeWriter {
                                 p.getRepository(),
                                 LinkAttacher.attachLink(p.getCommitID(), link.toString()),
                                 p.getMicroChange().getType(),
-                                "",  // placeholder for confusion matrix
+                                "",  // placeholder for manually review confusion matrix
                                 p.getOldPath(),
                                 p.getNewPath(),
                                 "",  // placeholder for note
