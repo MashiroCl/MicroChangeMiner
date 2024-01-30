@@ -25,7 +25,7 @@ public class RemoveElse implements MicroChangePattern{
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings){
         return action.getName().equals("delete-tree")
                 && action.getNode().getParent().getType().name.equals("IfStatement")
-                && action.getNode().getParent().getChildren().size()>1
+                && action.getNode().getParent().getChildren().size()>2
                 && action.getNode().equals(action.getNode().getParent().getChild(2));
     }
 }
