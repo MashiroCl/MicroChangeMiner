@@ -113,10 +113,10 @@ public class ReverseConditional implements MicroChangePattern{
             String afterLeftElement = mappings.get(action.getNode().getParent()).getChild(0).getLabel();
             String afterRightElement = mappings.get(action.getNode().getParent()).getChild(2).getLabel();
 
-            System.out.println(beforeLeftElement);
-            System.out.println(beforeRightElement);
-            System.out.println(afterLeftElement);
-            System.out.println(afterRightElement);
+//            System.out.println(beforeLeftElement);
+//            System.out.println(beforeRightElement);
+//            System.out.println(afterLeftElement);
+//            System.out.println(afterRightElement);
 
             return (beforeLeftElement.equals(afterLeftElement) && beforeRightElement.equals(afterRightElement))
                     || (beforeLeftElement.equals(afterRightElement) && beforeRightElement.equals(afterLeftElement));
