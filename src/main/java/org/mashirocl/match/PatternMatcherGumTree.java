@@ -2,6 +2,7 @@ package org.mashirocl.match;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.microchange.MicroChange;
 import org.mashirocl.microchange.MicroChangePattern;
 
@@ -14,6 +15,7 @@ import java.util.stream.Stream;
  * @author mashirocl@gmail.com
  * @since 2024/01/10 10:03
  */
+@Slf4j
 public class PatternMatcherGumTree implements PatternMatcher {
 
     private final List<MicroChangePattern> microChangePatternList = new LinkedList<>();
@@ -45,11 +47,15 @@ public class PatternMatcherGumTree implements PatternMatcher {
             if(pattern.matchConditionGumTree(action, mappings)){
                 microChanges.add(MicroChange.of(pattern.getClass().getSimpleName(),
                         action.toString()));
-                System.out.println("Match found with pattern: "+pattern.getClass().getSimpleName());
+                log.info("Match found with pattern: {}",pattern.getClass().getSimpleName());
 //                System.out.println(action);
             }
         }
         return microChanges;
     }
+
+//    public void loadAllMicroChanges(){
+//        microChangePatternList.add();
+//    }
 
 }

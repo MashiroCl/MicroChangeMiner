@@ -64,8 +64,11 @@ public class EditScriptExtractor {
         log.info("Computing edit script...");
         Map<String, List<DiffEditScriptMapping>> res = new HashMap<>();
         Iterable<RevCommit> walk = ra.walk(startCommitID, endCommitID);
+        int count = 0;
         try {
             for (RevCommit commit : walk) {
+                count++;
+                log.info("Getting edit script for {}, #{}", commit.getId().name(), count);
                 if (commit.getParents().length == 0) continue;
                 RevTree newTree = commit.getTree();
                 RevTree oldTree = commit.getParent(0).getTree();

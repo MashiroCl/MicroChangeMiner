@@ -78,9 +78,14 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ParallelCondition());
 
         List<MinedMicroChange> minedMicroChanges = new LinkedList<>();
+
+        int count = 0;
+        int total_count = res.keySet().size();
         for (String commitID : res.keySet()) {
 //            if(!commitID.contains("6d8b71cc9688ba25292c4b31b7f1c1aa389106ba")) continue;
 //            System.out.println(commitID);
+            count++;
+            log.info("Mining {}/{} {}...",count,total_count,commitID);
             for (DiffEditScriptMapping diffEditScript : res.get(commitID)) {
                 EditScript editScript = diffEditScript.getDiffEditScript().getEditScript();
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(diffEditScript.getEditScriptMapping().getMappingStore());
