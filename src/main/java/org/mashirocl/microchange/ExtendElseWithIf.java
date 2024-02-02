@@ -22,9 +22,8 @@ public class ExtendElseWithIf implements MicroChangePattern{
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-        return (action.getName().equals("insert-node")
+        return action.getName().equals("insert-node")
                 && action.getNode().getType().name.equals("IfStatement")
-                && action.getNode().getParent().getType().name.equals("IfStatement")
-                && mappings.containsKey(action.getNode().getParent()));
+                && action.getNode().getParent().getType().name.equals("IfStatement");
     }
 }
