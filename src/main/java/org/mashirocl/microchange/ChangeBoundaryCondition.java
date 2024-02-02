@@ -11,6 +11,14 @@ import java.util.Map;
  * @since 2024/02/02 15:17
  */
 public class ChangeBoundaryCondition implements MicroChangePattern{
+    /**
+     * condition:
+     * for one action in the edit script
+     * 1. is `update-node`
+     * 2. `>`/`<` is updated to `>=`/`<=`, or vice versa
+     * 3. the left side and right side of the relational operators are the same before and after change
+     * @return
+     */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
         return isSmallerThanIncludeEqual(action,mappings) || isSmallerThanExcludeEqual(action, mappings)
