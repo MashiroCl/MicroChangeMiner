@@ -20,9 +20,21 @@ public class DeleteConditionals implements MicroChangePattern{
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
+//        System.out.println("**************");
+//        if(action.getName().equals("move-tree")
+//                && action.getNode().getParent().getParent().getType().name.equals("IfStatement")
+//                && mappings.containsKey(action.getNode())){
+//
+//            System.out.println(mappings.get(action.getNode()));
+//            System.out.println(mappings.get(action.getNode()).getParent());
+//            System.out.println(mappings.get(action.getNode()).getParent().getParent().toTreeString());
+//        }
+//        System.out.println("-----------------------");
+
         return action.getName().equals("move-tree")
                 && action.getNode().getParent().getParent().getType().name.equals("IfStatement")
                 && mappings.containsKey(action.getNode())
+                && !mappings.get(action.getNode()).getParent().getType().name.equals("IfStatement")
                 && mappings.get(action.getNode()).getParent().getParent().getType().name.equals("Block");
     }
 }
