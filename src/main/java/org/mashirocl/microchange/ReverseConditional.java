@@ -1,7 +1,6 @@
 package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
-import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.Tree;
 
@@ -60,13 +59,13 @@ public class ReverseConditional implements MicroChangePattern{
         return isInsertExclamationInfix(action, mappings)
                 || isInsertExclamationPrefix(action, mappings)
                 || isRemoveExclamationInfix(action, mappings)
-                || isInverseSmallerOrEqualThan(action)
+                || isInverseSmallerOrEqualThan(action, mappings)
                 || isInverseSmallerOrEqualThanOrderChange(action, mappings)
-                || isInverseSmallerThan(action)
+                || isInverseSmallerThan(action, mappings)
                 || isInverseSmallerThanOrderChange(action, mappings)
-                || isInverseGreaterOrEqualThan(action)
+                || isInverseGreaterOrEqualThan(action, mappings)
                 || isInverseGreaterOrEqualThanOrderChange(action, mappings)
-                || isInverseGreaterThan(action)
+                || isInverseGreaterThan(action, mappings)
                 || isInverseGreaterThanOrderChange(action, mappings);
     }
 
@@ -83,7 +82,7 @@ public class ReverseConditional implements MicroChangePattern{
                 && action.getNode().getLabel().equals("==")
                 && ((Update) action).getValue().equals("!=")){
 
-            return isBeforeAfterEqualForInfix(action, mappings);
+            return isBeforeAfterEqualForInfix(action, mappings) || isBeforeAfterReverseForInfix(action, mappings);
 
         }
 
@@ -99,7 +98,7 @@ public class ReverseConditional implements MicroChangePattern{
                 && action.getNode().getLabel().equals("!=")
                 && ((Update) action).getValue().equals("==")){
 
-            return isBeforeAfterEqualForInfix(action, mappings);
+            return isBeforeAfterEqualForInfix(action, mappings) || isBeforeAfterReverseForInfix(action, mappings);
         }
         return false;
     }
@@ -112,14 +111,20 @@ public class ReverseConditional implements MicroChangePattern{
             String beforeRightElement = action.getNode().getParent().getChild(2).getLabel();
             String afterLeftElement = mappings.get(action.getNode().getParent()).getChild(0).getLabel();
             String afterRightElement = mappings.get(action.getNode().getParent()).getChild(2).getLabel();
+            return beforeLeftElement.equals(afterLeftElement) && beforeRightElement.equals(afterRightElement);
+        }
+        return false;
+    }
 
-//            System.out.println(beforeLeftElement);
-//            System.out.println(beforeRightElement);
-//            System.out.println(afterLeftElement);
-//            System.out.println(afterRightElement);
-
-            return (beforeLeftElement.equals(afterLeftElement) && beforeRightElement.equals(afterRightElement))
-                    || (beforeLeftElement.equals(afterRightElement) && beforeRightElement.equals(afterLeftElement));
+    private boolean isBeforeAfterReverseForInfix(Action action, Map<Tree, Tree> mappings){
+        if(action.getNode().getParent().getChildren().size()>2
+                && mappings.containsKey(action.getNode().getParent())
+                && mappings.get(action.getNode().getParent()).getChildren().size()>2){
+            String beforeLeftElement = action.getNode().getParent().getChild(0).getLabel();
+            String beforeRightElement = action.getNode().getParent().getChild(2).getLabel();
+            String afterLeftElement = mappings.get(action.getNode().getParent()).getChild(0).getLabel();
+            String afterRightElement = mappings.get(action.getNode().getParent()).getChild(2).getLabel();
+            return beforeLeftElement.equals(afterRightElement) && beforeRightElement.equals(afterLeftElement);
         }
         return false;
     }
@@ -167,11 +172,14 @@ public class ReverseConditional implements MicroChangePattern{
     /**
      * X>Y -> X<=Y
      */
-    private boolean isInverseGreaterThan(Action action){
+    private boolean isInverseGreaterThan(Action action, Map<Tree, Tree> mappings){
         return action.getName().equals("update-node")
                 && action.getNode().getLabel().equals(">")
-                && ((Update) action).getValue().equals("<=");
+                && ((Update) action).getValue().equals("<=")
+                && isBeforeAfterEqualForInfix(action, mappings);
     }
+
+
 
     /**
      * X>Y -> Y>=X
@@ -180,16 +188,19 @@ public class ReverseConditional implements MicroChangePattern{
         return action.getName().equals("update-node")
                 && mappings.get(action.getNode()).getLabel().equals(((Update) action).getValue())
                 && action.getNode().getLabel().equals(">")
-                && ((Update) action).getValue().equals(">=");
+                && ((Update) action).getValue().equals(">=")
+                && isBeforeAfterReverseForInfix(action, mappings);
+
     }
 
     /**
      * X<Y -> X>=Y
      */
-    private boolean isInverseSmallerThan(Action action){
+    private boolean isInverseSmallerThan(Action action, Map<Tree, Tree> mappings){
         return action.getName().equals("update-node")
                 && action.getNode().getLabel().equals("<")
-                && ((Update) action).getValue().equals(">=");
+                && ((Update) action).getValue().equals(">=")
+                && isBeforeAfterEqualForInfix(action, mappings);
     }
 
     /**
@@ -199,17 +210,19 @@ public class ReverseConditional implements MicroChangePattern{
         return action.getName().equals("update-node")
                 && mappings.get(action.getNode()).getLabel().equals(((Update) action).getValue())
                 && action.getNode().getLabel().equals("<")
-                && ((Update) action).getValue().equals("<=");
+                && ((Update) action).getValue().equals("<=")
+                && isBeforeAfterReverseForInfix(action, mappings);
     }
 
     /**
      *
      * X>=Y -> X<Y
      */
-    private boolean isInverseGreaterOrEqualThan(Action action){
+    private boolean isInverseGreaterOrEqualThan(Action action, Map<Tree, Tree> mappings){
         return action.getName().equals("update-node")
                 && action.getNode().getLabel().equals(">=")
-                && ((Update) action).getValue().equals("<");
+                && ((Update) action).getValue().equals("<")
+                && isBeforeAfterEqualForInfix(action, mappings);
     }
 
     /**
@@ -219,17 +232,19 @@ public class ReverseConditional implements MicroChangePattern{
         return action.getName().equals("update-node")
                 && mappings.get(action.getNode()).getLabel().equals(((Update) action).getValue())
                 && action.getNode().getLabel().equals(">=")
-                && ((Update) action).getValue().equals("<");
+                && ((Update) action).getValue().equals("<")
+                && isBeforeAfterReverseForInfix(action, mappings);
     }
 
     /**
      *
      * X<=Y -> X>Y
      */
-    private boolean isInverseSmallerOrEqualThan(Action action){
+    private boolean isInverseSmallerOrEqualThan(Action action, Map<Tree, Tree> mappings){
         return action.getName().equals("update-node")
                 && action.getNode().getLabel().equals("<=")
-                && ((Update) action).getValue().equals(">");
+                && ((Update) action).getValue().equals(">")
+                && isBeforeAfterEqualForInfix(action, mappings);
     }
 
     /**
@@ -239,7 +254,8 @@ public class ReverseConditional implements MicroChangePattern{
         return action.getName().equals("update-node")
                 && mappings.get(action.getNode()).getLabel().equals(((Update) action).getValue())
                 && action.getNode().getLabel().equals("<=")
-                && ((Update) action).getValue().equals("<");
+                && ((Update) action).getValue().equals("<")
+                && isBeforeAfterReverseForInfix(action, mappings);
     }
 
 }
