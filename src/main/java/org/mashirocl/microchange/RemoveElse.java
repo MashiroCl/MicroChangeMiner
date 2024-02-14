@@ -2,7 +2,10 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import org.mashirocl.editscript.EditScriptStorer;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,5 +30,20 @@ public class RemoveElse implements MicroChangePattern{
                 && action.getNode().getParent().getType().name.equals("IfStatement")
                 && action.getNode().getParent().getChildren().size()>2
                 && action.getNode().equals(action.getNode().getParent().getChild(2));
+    }
+
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+        return matchConditionGumTree(action, mappings);
+    }
+
+    @Override
+    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        List<Position> positions = new LinkedList<>();
+        positions.add(new Position(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        ));
+        return positions;
     }
 }

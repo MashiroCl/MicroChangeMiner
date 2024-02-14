@@ -50,9 +50,11 @@ public class MicroChangeWriter {
         log.info("read from {} and write to {}", inputPath, outputPath);
         try( CSVWriter csvWriter = new CSVWriter(new FileWriter(outputPath))){
             ObjectMapper objectMapper = new ObjectMapper();
-            List<MinedMicroChange> microChanges = objectMapper.readValue(new File(inputPath), objectMapper.getTypeFactory().constructCollectionType(List.class, MinedMicroChange.class));
+            List<MinedMicroChange> microChanges = objectMapper.readValue(
+                    new File(inputPath),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, MinedMicroChange.class));
 
-            String [] header = {"Repository", "CommitID", "Type", "Review" ,"OldPath", "NewPath", "Note", "Action"};
+            String [] header = {"Repository", "CommitID", "Type", "Review" ,"OldPath", "NewPath","Position", "Note", "Action"};
             csvWriter.writeNext(header);
             microChanges.forEach(
                     p-> {
@@ -63,6 +65,7 @@ public class MicroChangeWriter {
                                 "",  // placeholder for manually review confusion matrix
                                 p.getOldPath(),
                                 p.getNewPath(),
+                                p.getMicroChange().getPositions().toString(),
                                 "",  // placeholder for note
                                 p.getMicroChange().getAction()
                         };

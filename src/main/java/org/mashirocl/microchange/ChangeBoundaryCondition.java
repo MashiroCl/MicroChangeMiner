@@ -3,7 +3,10 @@ package org.mashirocl.microchange;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.Tree;
+import org.mashirocl.editscript.EditScriptStorer;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +26,21 @@ public class ChangeBoundaryCondition implements MicroChangePattern{
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
         return isSmallerThanIncludeEqual(action,mappings) || isSmallerThanExcludeEqual(action, mappings)
                 || isGreaterThanIncludeEqual(action, mappings) || isGreaterThanExcludeEqual(action, mappings);
+    }
+
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+        return matchConditionGumTree(action, mappings);
+    }
+
+    @Override
+    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        List<Position> positions = new LinkedList<>();
+        positions.add(new Position(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        ));
+        return positions;
     }
 
 
@@ -60,6 +78,10 @@ public class ChangeBoundaryCondition implements MicroChangePattern{
     }
 
     private boolean isSmallerThanExcludeEqual(Action action, Map<Tree, Tree> mappings){
+        if(action.getName().equals("update-node")
+                && action.getNode().getLabel().equals("<=")
+                && ((Update) action).getValue().equals("<")){
+        }
         return action.getName().equals("update-node")
                 && action.getNode().getLabel().equals("<=")
                 && ((Update) action).getValue().equals("<")

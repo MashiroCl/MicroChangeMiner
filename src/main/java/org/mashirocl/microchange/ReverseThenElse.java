@@ -3,7 +3,9 @@ package org.mashirocl.microchange;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.Tree;
+import org.mashirocl.editscript.EditScriptStorer;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +38,21 @@ public class ReverseThenElse implements MicroChangePattern {
 
         return beforeMoveNode.getParent().getType().name.equals("IfStatement")
                 && mappings.get(beforeMoveNode.getParent()).equals(afterMoveNode.getParent());
+    }
+
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+        return matchConditionGumTree(action, mappings);
+    }
+
+    @Override
+    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        List<Position> positions = new LinkedList<>();
+        positions.add(new Position(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        ));
+        return positions;
     }
 
     //TODO for remove redundant else

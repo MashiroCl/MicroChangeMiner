@@ -2,7 +2,10 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import org.mashirocl.editscript.EditScriptStorer;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -53,5 +56,34 @@ public class UnifyCondition implements MicroChangePattern{
 
 
         return false;
+    }
+
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+        return matchConditionGumTree(action,mappings);
+    }
+
+    @Override
+    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        List<Position> positions = new LinkedList<>();
+        // left side
+        // the not changed part condition/ the being moved condition
+        Position notChangedContidion = new Position(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        );
+        positions.add(notChangedContidion);
+        // the being unified if-block
+        if(nodeActions.containsKey(action.getNode().getParent())){
+            for(Action a:nodeActions.get(action.getNode().getParent())){
+                if(a.getName().equals("delete-node") || a.getName().equals("delete-tree")){
+                    positions.add(new Position(
+                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
+                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())
+                    ));
+                }
+            }
+        }
+        return positions;
     }
 }

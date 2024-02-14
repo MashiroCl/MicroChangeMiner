@@ -2,7 +2,10 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import org.mashirocl.editscript.EditScriptStorer;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,7 +18,7 @@ public class ConditionalToBooleanReturn implements MicroChangePattern{
      * condition
      * 1. action node is `move-tree`
      * 2. node is the 1st child of its parent, and its parent is the `IfStatement`
-     * 3. target is `ReturnStatement `
+     * 3. target is `ReturnStatement`
      * @param action
      * @param mappings
      * @return
@@ -38,5 +41,38 @@ public class ConditionalToBooleanReturn implements MicroChangePattern{
 //        System.out.println(action.getNode().getParent().getChild(0));
 //        System.out.println("IfStatementChild mapping");
 //        System.out.println(mappings.get(action.getNode().getParent().getChild(0)));
+    }
+
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+        return matchConditionGumTree(action, mappings);
+    }
+
+    @Override
+    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        List<Position> positions = new LinkedList<>();
+        // left side
+        // being moved condition
+        Position movedCondition = new Position(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
+        positions.add(movedCondition);
+        // being removed return statement in Then & Else
+        Tree ifStatement = action.getNode().getParent();
+        for(Tree node:ifStatement.getChildren()){
+            for(Action a: nodeActions.get(node)){
+                positions.add(new Position(
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())));
+            }
+        }
+        //right side
+        // added return statement
+        Tree addedStatement = mappings.get(action.getNode()).getParent();
+        positions.add(new Position(
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(addedStatement.getPos()),
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(addedStatement.getEndPos())
+        ));
+        return positions;
     }
 }
