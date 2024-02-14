@@ -6,7 +6,10 @@ import com.github.gumtreediff.tree.Tree;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.mashirocl.dao.MinedMicroChange;
-import org.mashirocl.editscript.DiffEditScriptMapping;
+import org.mashirocl.editscript.ActionRetriever;
+import org.mashirocl.editscript.DiffEditScriptWithSource;
+import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.match.ActionLocator;
 import org.mashirocl.match.PatternMatcher;
 import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.microchange.*;
@@ -25,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * @author mashirocl@gmail.com
@@ -61,7 +65,7 @@ public class MineCommand implements Callable<Integer> {
         final DiffFormatter diffFormatter = new DiffFormatter(System.out);
         diffFormatter.setRepository(ra.getRepository());
 
-        Map<String, List<DiffEditScriptMapping>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
 
         PatternMatcher patternMatcherGumTree = new PatternMatcherGumTree();
         patternMatcherGumTree.addMicroChange(new ReverseThenElse());
@@ -78,31 +82,89 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ParallelCondition());
         patternMatcherGumTree.addMicroChange(new ChangeBoundaryCondition());
 
+//        TODO: Not finished
+//        patternMatcherGumTree.addMicroChange(new ReplaceVariableWithExpression());
+
         List<MinedMicroChange> minedMicroChanges = new LinkedList<>();
+        ActionLocator actionLocator = new ActionLocator();
 
         int count = 0;
+        int numberMicroChangeContainedAction=0, numberTotalActionNumber = 0;
         int total_count = res.keySet().size();
+        int totalCodeChangeLines = 0;
+        int microChangeCoveredLines = 0;
+
         for (String commitID : res.keySet()) {
-//            if(!commitID.contains("b0c9ecf93170a73054eeda3c5623d2b6dffb1db8")) continue;
-//            System.out.println(commitID);
+//            if(!commitID.contains("187d81c61e56ad369dfb2ebaa4909159a4087df5"))
+//                continue;
+            System.out.println(commitID);
             count++;
             log.info("Mining {}/{} {}...",count,total_count,commitID);
-            for (DiffEditScriptMapping diffEditScript : res.get(commitID)) {
-                EditScript editScript = diffEditScript.getDiffEditScript().getEditScript();
-                Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(diffEditScript.getEditScriptMapping().getMappingStore());
+            for (DiffEditScriptWithSource diffEditScriptWithSource : res.get(commitID)) {
+                EditScript editScript = diffEditScriptWithSource.getEditScript();
+                EditScriptStorer editScriptStorer = diffEditScriptWithSource.getEditScriptStorer();
+                Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(editScriptStorer.getMappingStore());
+                Map<Tree, List<Action>> nodeActions = ActionRetriever.retrieveMap(editScript);
+
+                //positions for all the change in a single file in a commit
+                List<Position> changePositions = new LinkedList<>();
+                //positions for micro-changes in a single file in a commit
+                List<Position> microChangePositions = new LinkedList<>();
+
                 for (Action a : editScript) {
-                    List<MicroChange> microChanges = patternMatcherGumTree.match(a, mappings);
+//                    System.out.println("action number "+numberTotalActionNumber);
+//                    System.out.println(a);
+//                    System.out.println("parent");
+//                    System.out.println(a.getNode().getParent());
+//                    System.out.println("parent parent");
+//                    System.out.println(a.getNode().getParent().getParent());
+//                    System.out.println("parent action");
+//                    for(Action aa:nodeActions.get(a.getNode().getParent())){
+//                        System.out.println(aa);
+//                    }
+//                    System.out.println("parent parent action");
+//                    for(Action aa:nodeActions.get(a.getNode().getParent().getParent().getChild(2))){
+//                        System.out.println(aa);
+//                    }
+//                    break;
+                    numberTotalActionNumber+=1;
+                    //mine micro-changes
+                    List<MicroChange> microChanges = patternMatcherGumTree.match(a, mappings, nodeActions, editScriptStorer);
+                    //action location
+                    changePositions.addAll(actionLocator.getLocation(a, editScriptStorer));
                     if(microChanges.isEmpty()) continue;
+                    //micro-change locations
+                    microChangePositions.addAll(microChanges.stream().flatMap(p->p.getPositions().stream()).toList());
+
                     minedMicroChanges.addAll(microChanges.stream()
                                             .map(p -> new MinedMicroChange(
                                                     repositoryName,
                                                     commitID,
-                                                    diffEditScript.getDiffEditScript().getDiffEntry().getOldPath(),
-                                                    diffEditScript.getDiffEditScript().getDiffEntry().getNewPath(),
+                                                    diffEditScriptWithSource.getDiffEntry().getOldPath(),
+                                                    diffEditScriptWithSource.getDiffEntry().getNewPath(),
                                                     p)).toList());
+                    numberMicroChangeContainedAction+=1;
+
+                }
+
+//                List<Position> totalChangeScopes = actionLocator.scopeCalculate(changePositions);
+//                List<Position> microChangeScopes = actionLocator.scopeCalculate(microChangePositions);
+                if(!changePositions.isEmpty()) {
+                    int codeChangeLines = actionLocator.coveredLines(changePositions);
+                    totalCodeChangeLines += codeChangeLines;
+                    log.info("# lines code changed: {}", codeChangeLines);
+                }
+                if(!microChangePositions.isEmpty()){
+                    int actionChangeLines = actionLocator.coveredLines(microChangePositions);
+                    microChangeCoveredLines+=actionChangeLines;
+                    log.info("micro change covered lines: {}", actionChangeLines);
                 }
             }
         }
+
+
+        log.info("micro-change lines/number of total lines of code change: {}/{}="+String.format("%.4f", (float)microChangeCoveredLines/totalCodeChangeLines), microChangeCoveredLines, totalCodeChangeLines);
+        log.info("micro-change contained action/number of total actions: {}/{}="+String.format("%.4f", (float)numberMicroChangeContainedAction/numberTotalActionNumber), numberMicroChangeContainedAction, numberTotalActionNumber);
 
         if(config.commitMap!=null){
             log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
