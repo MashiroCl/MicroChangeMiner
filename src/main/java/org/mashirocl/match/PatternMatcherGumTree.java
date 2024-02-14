@@ -3,6 +3,7 @@ package org.mashirocl.match;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import lombok.extern.slf4j.Slf4j;
+import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.microchange.MicroChange;
 import org.mashirocl.microchange.MicroChangePattern;
 
@@ -28,18 +29,6 @@ public class PatternMatcherGumTree implements PatternMatcher {
         ;
     }
 
-//    @Override
-//    public MicroChangePattern match(Action action) {
-//        for(MicroChangePattern pattern: microChangePatternList){
-//            if(pattern.matchConditionGumTree(action)){
-//                System.out.println("Match found with pattern: "+pattern.getClass().getSimpleName());
-//                System.out.println(action);
-//            }
-//        }
-//
-//        return null;
-//    }
-
     @Override
     public List<MicroChange> match(Action action, Map<Tree, Tree> mappings) {
         List<MicroChange> microChanges = new LinkedList<>();
@@ -53,6 +42,25 @@ public class PatternMatcherGumTree implements PatternMatcher {
         }
         return microChanges;
     }
+
+
+    public List<MicroChange> match(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        List<MicroChange> microChanges = new LinkedList<>();
+        for(MicroChangePattern pattern: microChangePatternList){
+            if(pattern.matchConditionGumTree(action, mappings, nodeActions)){
+                microChanges.add(
+                        MicroChange.of(
+                                pattern.getClass().getSimpleName(),
+                                action.toString(),
+                                pattern.getPosition(action, mappings, nodeActions, editScriptStorer)));
+                log.info("Match found with pattern: {}",pattern.getClass().getSimpleName());
+            }
+        }
+        return microChanges;
+    }
+
+
+
 
 //    public void loadAllMicroChanges(){
 //        microChangePatternList.add();
