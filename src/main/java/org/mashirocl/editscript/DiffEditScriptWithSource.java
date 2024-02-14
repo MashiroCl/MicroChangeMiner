@@ -1,29 +1,30 @@
 package org.mashirocl.editscript;
 
-import com.github.gumtreediff.matchers.Matcher;
-import com.github.gumtreediff.tree.Tree;
+import com.github.gumtreediff.actions.EditScript;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.mashirocl.source.FileSource;
-import org.mashirocl.source.SourcePair;
-import org.mashirocl.util.RepositoryAccess;
-
-import java.util.Map;
+import org.eclipse.jgit.diff.DiffEntry;
 
 /**
  * @author mashirocl@gmail.com
  * @since 2024/01/17 10:50
  */
 
-@AllArgsConstructor
 @Getter
-public class DiffEditScriptMapping{
-    private final DiffEditScript diffEditScript;
-    private EditScriptMapping editScriptMapping;
+public class DiffEditScriptWithSource extends DiffEditScript{
+    private final EditScriptStorer editScriptStorer;
+    public DiffEditScriptWithSource(final DiffEntry diffEntry, final EditScript editScript, final EditScriptStorer editScriptStorer){
+        super(diffEntry, editScript);
+        this.editScriptStorer = editScriptStorer;
+    }
 
-    public static DiffEditScriptMapping of(final DiffEditScript diffEditScript, final EditScriptMapping editScriptMapping){
-        return new DiffEditScriptMapping(diffEditScript, editScriptMapping);
+    public DiffEditScriptWithSource(final DiffEditScript diffEditScript, final EditScriptStorer editScriptStorer){
+        super(diffEditScript.getDiffEntry(), diffEditScript.getEditScript());
+        this.editScriptStorer = editScriptStorer;
+    }
+
+    public static DiffEditScriptWithSource of(final DiffEditScript diffEditScript, final EditScriptStorer editScriptStorer){
+        return new DiffEditScriptWithSource(diffEditScript, editScriptStorer);
     }
 
 
