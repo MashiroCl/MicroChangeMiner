@@ -1,15 +1,8 @@
 package org.mashirocl.editscript;
 
 import com.github.gumtreediff.actions.EditScript;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import org.eclipse.jgit.diff.DiffEntry;
-import org.mashirocl.source.FileSource;
-import org.mashirocl.source.SourcePair;
-
-import java.util.HashMap;
 
 /**
  * @author mashirocl@gmail.com
