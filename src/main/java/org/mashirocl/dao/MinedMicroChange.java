@@ -22,15 +22,21 @@ public class MinedMicroChange {
     private final String oldPath;
     @JsonProperty("newPath")
     private final String newPath;
-    @JsonProperty("microChange")
-    private final MicroChange microChange;
+    @JsonProperty("type")
+    private final String type;
+    @JsonProperty("action")
+    private final String action;
+    @JsonProperty("position")
+    private final String position;
 
-    public MinedMicroChange(String repository, String commitID, String oldPath, String newPath, MicroChange microChange) {
+    public MinedMicroChange(String repository, String commitID, String oldPath, String newPath, String type, String action, String position) {
         this.repository = repository;
         this.commitID = simplifyCommitID(commitID);
         this.oldPath = oldPath;
         this.newPath = newPath;
-        this.microChange = microChange;
+        this.type = type;
+        this.action = action;
+        this.position =position;
     }
 
     private String simplifyCommitID(String commitID){

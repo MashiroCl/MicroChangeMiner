@@ -3,6 +3,7 @@ package org.mashirocl.microchange;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.Tree;
+import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 
 import java.util.LinkedList;
@@ -36,6 +37,33 @@ public class ConditionalToTernaryOperator implements MicroChangePattern{
     }
 
     @Override
+    public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        SrcDstRange srcDstRange = new SrcDstRange();
+        // left side
+        // being moved condition
+        Range<Integer> movedCondition = Range.closed(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
+        srcDstRange.getSrcRange().add(movedCondition);
+        // being removed expressions in Then & Else
+        Tree ifStatement = action.getNode().getParent();
+        for(Tree node:ifStatement.getChildren()){
+            for(Action a: nodeActions.get(node)){
+                srcDstRange.getSrcRange().add(Range.closed(
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())));
+            }
+        }
+        //right side
+        // added ternary expression
+        srcDstRange.getDstRange().add(Range.closed(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(((Move)action).getParent().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(((Move)action).getParent().getEndPos())
+        ));
+
+        return srcDstRange;
+    }
+
     public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         List<Position> positions = new LinkedList<>();
         // left side

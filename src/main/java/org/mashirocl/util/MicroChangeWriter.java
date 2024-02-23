@@ -1,6 +1,9 @@
 package org.mashirocl.util;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVWriter;
@@ -61,13 +64,13 @@ public class MicroChangeWriter {
                         String[] data = {
                                 p.getRepository(),
                                 LinkAttacher.attachLink(p.getCommitID(), link.toString()),
-                                p.getMicroChange().getType(),
+                                p.getType(),
                                 "",  // placeholder for manually review confusion matrix
                                 p.getOldPath(),
                                 p.getNewPath(),
-                                p.getMicroChange().getPositions().toString(),
+                                p.getPosition(),
                                 "",  // placeholder for note
-                                p.getMicroChange().getAction()
+                                p.getAction()
                         };
                         csvWriter.writeNext(data);
                     });
@@ -104,10 +107,10 @@ public class MicroChangeWriter {
                         String[] data = {
                                 p.getRepository(),
                                 commitMapper.getMap().getOrDefault( p.getCommitID(),"no-mapping-found"),
-                                p.getMicroChange().getType(),
+                                p.getType(),
                                 p.getOldPath(),
                                 p.getNewPath(),
-                                p.getMicroChange().getAction()};
+                                p.getAction()};
                         csvWriter.writeNext(data);
                     });
         }

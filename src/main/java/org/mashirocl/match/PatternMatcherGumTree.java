@@ -52,7 +52,9 @@ public class PatternMatcherGumTree implements PatternMatcher {
                         MicroChange.of(
                                 pattern.getClass().getSimpleName(),
                                 action.toString(),
-                                pattern.getPosition(action, mappings, nodeActions, editScriptStorer)));
+//                                pattern.getPosition(action, mappings, nodeActions, editScriptStorer)
+                                pattern.getSrcDstRange(action, mappings, nodeActions, editScriptStorer)
+                        ));
                 log.info("Match found with pattern: {}",pattern.getClass().getSimpleName());
             }
         }

@@ -2,6 +2,8 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import org.mashirocl.editscript.EditScriptStorer;
 
 import java.util.LinkedList;
@@ -48,7 +50,37 @@ public class ConditionalToBooleanReturn implements MicroChangePattern{
         return matchConditionGumTree(action, mappings);
     }
 
+
     @Override
+    public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        SrcDstRange srcDstRange = new SrcDstRange();
+        // left side
+        // being moved condition
+        Range<Integer> movedCondition = Range.closed(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
+        srcDstRange.getSrcRange().add(movedCondition);
+        // being removed return statement in Then & Else
+        Tree ifStatement = action.getNode().getParent();
+        for(Tree node:ifStatement.getChildren()){
+            for(Action a: nodeActions.get(node)){
+                srcDstRange.getSrcRange().add(Range.closed(
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())));
+            }
+        }
+
+        //right side
+        // added return statement
+        Tree addedStatement = mappings.get(action.getNode()).getParent();
+        srcDstRange.getDstRange().add(Range.closed(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(addedStatement.getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(addedStatement.getEndPos())
+        ));
+
+        return srcDstRange;
+    }
+
     public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         List<Position> positions = new LinkedList<>();
         // left side

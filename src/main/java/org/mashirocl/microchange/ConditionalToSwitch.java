@@ -2,6 +2,7 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 
 import java.util.LinkedList;
@@ -45,6 +46,33 @@ public class ConditionalToSwitch implements MicroChangePattern{
     }
 
     @Override
+    public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        SrcDstRange srcDstRange = new SrcDstRange();
+        // left side
+        // being moved expression
+        Range<Integer> movedExpression = Range.closed(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        );
+        // the if-statement
+        Range<Integer> ifStatement = Range.closed(
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getParent().getPos()),
+                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getParent().getEndPos())
+        );
+
+        //right side
+        // switch case
+        Range<Integer> switchCase = Range.closed(
+                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getPos()),
+                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getEndPos())
+        );
+
+        srcDstRange.getSrcRange().add(movedExpression);
+        srcDstRange.getSrcRange().add(ifStatement);
+        srcDstRange.getDstRange().add(switchCase);
+        return srcDstRange;
+    }
+
     public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         List<Position> positions = new LinkedList<>();
 

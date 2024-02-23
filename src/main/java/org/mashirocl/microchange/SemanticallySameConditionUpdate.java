@@ -2,6 +2,7 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 
 import java.util.LinkedList;
@@ -66,6 +67,23 @@ public class SemanticallySameConditionUpdate implements MicroChangePattern{
     }
 
     @Override
+    public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        SrcDstRange srcDstRange = new SrcDstRange();
+        // left side: condition
+        srcDstRange.getSrcRange().add(Range.closed(
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getParent().getChild(0).getPos()),
+                        editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getParent().getChild(0).getEndPos())
+                )
+        );
+        // right side: condition
+        srcDstRange.getDstRange().add(Range.closed(
+                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode().getParent()).getChild(0).getPos()),
+                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode().getParent()).getChild(0).getEndPos()))
+        );
+
+        return srcDstRange;
+    }
+
     public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         List<Position> positions = new LinkedList<>();
         positions.add(new Position(
