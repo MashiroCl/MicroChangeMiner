@@ -1,5 +1,6 @@
 package org.mashirocl.editscript;
 
+import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.SimplifiedChawatheScriptGenerator;
 import com.github.gumtreediff.matchers.Mapping;
@@ -32,6 +33,8 @@ public class EditScriptExtractor {
     static {
         defaultMatcher = Matchers.getInstance().getMatcher();
         editScriptGenerator = new SimplifiedChawatheScriptGenerator();
+//        editScriptGenerator = new ChawatheScriptGenerator();
+//        editScriptGenerator = new InsertDeleteChawatheScriptGenerator();
     }
 
     public static EditScriptMapping getEditScriptMapping(SourcePair sourcePair){
@@ -52,11 +55,15 @@ public class EditScriptExtractor {
         Map<String, List<DiffEditScriptWithSource>> res = new HashMap<>();
         Iterable<RevCommit> walk = ra.walk(startCommitID, endCommitID);
         int count = 0;
+        int processed_method_count = 0;
         try {
             for (RevCommit commit : walk) {
                 count++;
                 log.info("Getting edit script for {}, #{}", commit.getId().name(), count);
-                if (commit.getParents().length == 0) continue;
+                if (commit.getParents().length == 0) {
+                    log.info("parent number is 0, skipped");
+                    continue;
+                }
                 RevTree newTree = commit.getTree();
                 RevTree oldTree = commit.getParent(0).getTree();
                 List<DiffEntry> diffEntryList = diffFormatter.scan(newTree, oldTree);
@@ -64,21 +71,29 @@ public class EditScriptExtractor {
                 if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
                         || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
                 {
+                    log.info("Purely addition or deletion, skipped");
                     continue;
                 }
                 List<DiffEditScriptWithSource> diffEditScripts = new LinkedList<>();
 
                 for (DiffEntry diffEntry : diffEntryList) {
+
                     // exclude non-source code file (on both file-level/method-level)
                     String oldPath = diffEntry.getOldPath();
                     String newPath = diffEntry.getNewPath();
                     if(!oldPath.contains(".java") &&
                             !newPath.contains(".java") &&
                             !oldPath.contains(".mjava") &&
-                            !newPath.contains(".mjava"))
-                        break;
-//                    FileSource oldFile = FileSource.of(diffEntry.getOldPath(), oldTree, ra.getRepository());
-//                    FileSource newFile = FileSource.of(diffEntry.getNewPath(), newTree, ra.getRepository());
+                            !newPath.contains(".mjava")){
+                        log.info("Change not to source code file, oldpath: {}, newpath: {}", oldPath, newPath);
+                        continue;
+                    }
+
+//                    skip the file which has only addition/ deletion
+                    if(diffEntry.getChangeType()==DiffEntry.ChangeType.ADD
+                            ||diffEntry.getChangeType()==DiffEntry.ChangeType.DELETE)
+                        continue;
+
                     SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
                             FileSource.of(newPath, newTree, ra.getRepository()));
 
@@ -86,13 +101,18 @@ public class EditScriptExtractor {
 //                    EditScriptMapping editScriptMapping = getEditScriptMapping(sourcePair);
 
                     MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
-                    EditScriptStorer editScriptStorer = EditScriptStorer.of(editScriptGenerator.computeActions(mapping), mapping, sourcePair);
+
+                    EditScript editScript = editScriptGenerator.computeActions(mapping);
+                    EditScriptStorer editScriptStorer = EditScriptStorer.of(editScript, mapping, sourcePair);
+                    editScriptStorer.addChangedLineRanges(diffFormatter, diffEntry);
+
                     diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorer.getEditScript()), editScriptStorer));
+                    processed_method_count++;
                 }
 
                 res.put(commit.getId().toString(), diffEditScripts);
             }
-            log.info("Edit script computed");
+            log.info("Edit script computed, {} methods processed", processed_method_count);
             return res;
         }
         catch (IOException e){
