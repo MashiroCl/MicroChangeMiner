@@ -25,6 +25,29 @@ import java.util.stream.Collectors;
 public class ActionLocator {
 
 
+    public Range<Integer> toRange(Tree node) {
+        return Range.closedOpen(node.getPos(), node.getEndPos());
+    }
+
+    /**
+     * obtaining a range for a node with excluding its children range
+     * @return
+     */
+    private RangeSet<Integer> toRangeOfRoot(Tree node) {
+        RangeSet<Integer> result = TreeRangeSet.create();
+        result.add(toRange(node));
+        node.getChildren().forEach(c -> result.remove(toRange(c)));
+        return result;
+    }
+
+    public Range<Integer> toLineRange(Range<Integer> range, CompilationUnit cu) {
+        return Range.closed(cu.getLineNumber(range.lowerEndpoint()), cu.getLineNumber(range.upperEndpoint()));
+    }
+
+    public RangeSet<Integer> toLineRange(RangeSet<Integer> ranges, CompilationUnit cu) {
+        return TreeRangeSet.create(ranges.asRanges().stream().map(r -> toLineRange(r, cu)).toList());
+    }
+
     public SrcDstRange getRanges(Action action, Map<Tree, Tree> mappings, EditScriptStorer editScriptStorer){
         RangeSet<Integer> srcRangeSet = TreeRangeSet.create();
         RangeSet<Integer> dstRangeSet = TreeRangeSet.create();
@@ -32,84 +55,27 @@ public class ActionLocator {
         CompilationUnit dstCU = editScriptStorer.getDstCompilationUnit();
         switch (action.getName()){
             case "insert-tree":
-//                System.out.println("locating insert tree");
-                dstRangeSet.add(
-                        Range.closed(
-                                dstCU.getLineNumber(action.getNode().getPos()),
-                                dstCU.getLineNumber(action.getNode().getEndPos())));
+                dstRangeSet.add(toLineRange(toRange(action.getNode()), dstCU));
                 break;
             case "insert-node":
-//                System.out.println("locating insert node");
-//                System.out.println(action);
-                RangeSet<Integer> insertedRootNode = getRangeForRootNode(action);
-                for(Range<Integer> range: insertedRootNode.asRanges()){
-                    dstRangeSet.add(
-                            Range.closed(
-                                    dstCU.getLineNumber(range.lowerEndpoint()),
-                                    dstCU.getLineNumber(range.upperEndpoint())
-                            )
-                    );
-                }
-//                System.out.println("insertedRootNode");
-//                System.out.println(insertedRootNode);
+                dstRangeSet.addAll(toLineRange(toRangeOfRoot(action.getNode()), dstCU));
                 break;
             case "delete-tree":
-//                System.out.println("locating delete tree");
-                srcRangeSet.add(Range.closed(
-                        srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())
-                ));
+                srcRangeSet.add(toLineRange(toRange(action.getNode()), srcCU));
                 break;
             case "delete-node":
-//                System.out.println("locating delete node");
-                RangeSet<Integer> deletedRootNode = getRangeForRootNode(action);
-                for(Range<Integer> range: deletedRootNode.asRanges()){
-                    srcRangeSet.add(
-                            Range.closed(
-                                    srcCU.getLineNumber(range.lowerEndpoint()),
-                                    srcCU.getLineNumber(range.upperEndpoint())
-                            )
-                    );
-                }
+                srcRangeSet.addAll(toLineRange(toRangeOfRoot(action.getNode()), srcCU));
                 break;
             case "update-node":
-//                System.out.println("locating update-node");
-                srcRangeSet.add(
-                        Range.closed(
-                                srcCU.getLineNumber(action.getNode().getPos()),
-                                srcCU.getLineNumber(action.getNode().getEndPos())
-                ));
-                dstRangeSet.add(
-                        Range.closed(
-                                dstCU.getLineNumber(mappings.get(action.getNode()).getPos()),
-                                dstCU.getLineNumber(mappings.get(action.getNode()).getEndPos())));
+                srcRangeSet.addAll(toLineRange(toRangeOfRoot(action.getNode()), srcCU));
+                dstRangeSet.addAll(toLineRange(toRangeOfRoot(mappings.get(action.getNode())), dstCU));
                 break;
             case "move-tree":
-//                System.out.println("locating move-tree");
-//                System.out.println(action);
-                srcRangeSet.add(Range.closed(
-                        srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())
-                ));
-                dstRangeSet.add(
-                        Range.closed(
-                                dstCU.getLineNumber(mappings.get(action.getNode()).getPos()),
-                                dstCU.getLineNumber(mappings.get(action.getNode()).getEndPos())));
+                srcRangeSet.add(toLineRange(toRange(action.getNode()), srcCU));
+                dstRangeSet.add(toLineRange(toRange(mappings.get(action.getNode())), dstCU));
+                break;
         }
         return new SrcDstRange(srcRangeSet,dstRangeSet);
-    }
-
-    /**
-     * obtaining a range for a node with excluding its children range
-     * @return
-     */
-    private RangeSet<Integer> getRangeForRootNode(Action action){
-        RangeSet<Integer> rootNode = TreeRangeSet.create();
-        rootNode.add(Range.closed(action.getNode().getPos(), action.getNode().getEndPos()));
-        for(Tree child:action.getNode().getChildren()){
-            rootNode.remove(Range.closed(child.getPos(),child.getEndPos()));
-        }
-        return rootNode;
     }
 
     /**
