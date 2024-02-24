@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.microchange.Position;
-import org.mashirocl.microchange.SeperatedPosition;
 import org.mashirocl.microchange.SrcDstRange;
 
 import java.util.Arrays;
@@ -114,119 +113,6 @@ public class ActionLocator {
     }
 
     /**
-     * get locations for src and dst seperately
-     * @param action
-     * @param editScriptStorer
-     * @return
-     *
-     */
-    public SeperatedPosition getSeperatedLocations(Action action, Map<Tree, Tree> mappings, EditScriptStorer editScriptStorer){
-        List<Position> srcPositionList = new LinkedList<>();
-        List<Position> dstPositionList = new LinkedList<>();
-        CompilationUnit srcCU = editScriptStorer.getSrcCompilationUnit();
-        CompilationUnit dstCU = editScriptStorer.getDstCompilationUnit();
-        switch (action.getName()){
-            case "insert-tree":
-                dstPositionList.add(
-                        new Position(dstCU.getLineNumber(action.getNode().getPos()),
-                                dstCU.getLineNumber(action.getNode().getEndPos()))
-                );
-                break;
-            case "insert-node":
-//                System.out.println("insert node action");
-//                System.out.println("action");
-//                System.out.println(action);
-//                System.out.println("action node");
-//                System.out.println(action.getNode().toTreeString());
-                if(action.getNode().getType().toString().equals("IfStatement")){
-                    dstPositionList.add(
-                            new Position(dstCU.getLineNumber(action.getNode().getChild(0).getPos()),
-                                    dstCU.getLineNumber(action.getNode().getChild(0).getEndPos()))
-                    );
-//                    System.out.println("insert node"+dstPositionList.toString());
-                }
-                else{
-                    dstPositionList.add(new Position(dstCU.getLineNumber(action.getNode().getPos()),
-                            dstCU.getLineNumber(action.getNode().getEndPos())));
-                }
-                break;
-            case "delete-tree":
-                srcPositionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())));
-                break;
-            case "delete-node":
-                if(action.getNode().getType().toString().equals("IfStatement")){
-                    srcPositionList.add(
-                            new Position(srcCU.getLineNumber(action.getNode().getChild(0).getPos()),
-                                    srcCU.getLineNumber(action.getNode().getChild(0).getEndPos()))
-                    );
-                }
-                else{
-                    srcPositionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                            srcCU.getLineNumber(action.getNode().getEndPos())));
-                }
-                break;
-            case "update-node":
-                srcPositionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())));
-                dstPositionList.add(new Position(dstCU.getLineNumber(mappings.get(action.getNode()).getPos()),
-                        dstCU.getLineNumber(mappings.get(action.getNode()).getEndPos())));
-                break;
-            case "move-tree":
-                srcPositionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())));
-                dstPositionList.add(new Position(dstCU.getLineNumber(mappings.get(action.getNode()).getPos()),
-                        dstCU.getLineNumber(mappings.get(action.getNode()).getEndPos())));
-        }
-
-        return new SeperatedPosition(srcPositionList, dstPositionList);
-    }
-
-    public List<Position> getLocation(Action action, EditScriptStorer editScriptStorer){
-        List<Position> positionList = new LinkedList<>();
-        CompilationUnit srcCU = editScriptStorer.getSrcCompilationUnit();
-        CompilationUnit dstCU = editScriptStorer.getDstCompilationUnit();
-        switch (action.getName()){
-            case "insert-tree", "insert-node":
-//                srcPositionList.add(new Position(dstCU.getLineNumber(action.getNode().getPos()),
-//                        dstCU.getLineNumber(action.getNode().getEndPos())));
-                positionList.add(
-                        new Position(dstCU.getLineNumber(action.getNode().getPos()),
-                                dstCU.getLineNumber(action.getNode().getEndPos()))
-                );
-//                System.out.println("it is insert-tree or insert-node");
-//                System.out.printf("start position: %d\n", dstCU.getLineNumber(action.getNode().getPos()));
-//                System.out.printf("end position: %d\n", dstCU.getLineNumber(action.getNode().getEndPos()));
-//                System.out.println(action.getNode().toTreeString());
-                break;
-            case "delete-tree","delete-node":
-                positionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())));
-//                System.out.println("it is delete-tree or delete-node");
-//                System.out.printf("start position: %d\n", srcCU.getLineNumber(action.getNode().getPos()));
-//                System.out.printf("end position: %d\n", srcCU.getLineNumber(action.getNode().getEndPos()));
-//                System.out.println(action.getNode().toTreeString());
-                break;
-            case "update-node":
-//                System.out.println("it is update-node");
-//                System.out.printf("start position: %d\n", srcCU.getLineNumber(action.getNode().getPos()));
-//                System.out.printf("end position: %d\n", srcCU.getLineNumber(action.getNode().getEndPos()));
-//                System.out.println(action.getNode().toTreeString());
-                positionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())));
-                break;
-            case "move-tree":
-//                System.out.println("it is move-tree");
-//                System.out.printf("start position: %d\n", srcCU.getLineNumber(action.getNode().getPos()));
-//                System.out.printf("end position: %d\n", srcCU.getLineNumber(action.getNode().getEndPos()));
-//                System.out.println(action.getNode().toTreeString());
-                positionList.add(new Position(srcCU.getLineNumber(action.getNode().getPos()),
-                        srcCU.getLineNumber(action.getNode().getEndPos())));
-        }
-        return positionList;
-    }
-
-    /**
      * calculate the scopes using start line numbers and end line numbers
      * Calculated under the case that the start position and end position are in the same file, code changes across multiple
      * files are not considered
@@ -254,18 +140,4 @@ public class ActionLocator {
         }
         return scopes;
     }
-
-    public int coveredLines(List<Position> positions){
-        List<Position> positionList = scopeCalculate(positions);
-        return positionList.stream().map(p->p.getEndPosition()-p.getStartPosition()+1).reduce(0, Integer::sum);
-    }
-
-    public int[] coveredLines(SeperatedPosition seperatedPosition){
-
-        List<Position> srcPositionList = scopeCalculate(seperatedPosition.getSrcPositions());
-        List<Position> dstPositionList = scopeCalculate(seperatedPosition.getDstPositions());
-        return new int [] {srcPositionList.stream().map(p->p.getEndPosition()-p.getStartPosition()+1).reduce(0, Integer::sum),
-                dstPositionList.stream().map(p->p.getEndPosition()-p.getStartPosition()+1).reduce(0, Integer::sum)};
-    }
-
 }
