@@ -101,10 +101,12 @@ public class EditScriptExtractor {
                     MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
 
                     EditScript editScript = editScriptGenerator.computeActions(mapping);
-                    EditScriptStorer editScriptStorer = EditScriptStorer.of(editScript, mapping, sourcePair);
-                    editScriptStorer.addChangedLineRanges(diffFormatter, diffEntry);
+                    EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
+                    editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
+//                    EditScriptStorer editScriptStorer = EditScriptStorer.of(editScript, mapping, sourcePair);
+                    editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
 
-                    diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorer.getEditScript()), editScriptStorer));
+                    diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
                     processed_method_count++;
                 }
 

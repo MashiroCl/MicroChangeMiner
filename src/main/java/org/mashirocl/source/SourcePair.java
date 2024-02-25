@@ -5,25 +5,17 @@ import com.github.gumtreediff.matchers.Mapping;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.tree.Tree;
-import com.github.gumtreediff.tree.TreeContext;
-import lombok.AllArgsConstructor;
+import com.google.common.collect.Range;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jdt.core.dom.AST;
-import org.eclipse.jdt.core.dom.ASTParser;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.mashirocl.util.RepositoryAccess;
+import org.eclipse.jdt.core.dom.*;
+import org.mashirocl.location.RangeOperations;
+import org.mashirocl.microchange.SrcDstRange;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-import java.util.SortedMap;
 
 /**
  * @author mashirocl@gmail.com
@@ -87,28 +79,39 @@ public class SourcePair{
         }
     }
 
-//    public Map<Tree, Tree> getMappings(Matcher matcher){
-//        Map<Tree,Tree> map = new HashMap<>();
-//        for (Mapping cur : getMappingStore(matcher)) {
-//            map.put(cur.first, cur.second);
-//        }
-//        return map;
-//    }
-//
-//    public static Map<Tree, Tree> getMappings(String src, String dst, Matcher matcher){
-//        HashMap<Tree,Tree> map = new HashMap<>();
-//        for (Mapping cur : Objects.requireNonNull(getMappingStore(src, dst, matcher))) {
-//            map.put(cur.first, cur.second);
-//        }
-//        return map;
-//    }
-
     public static Map<Tree, Tree> getMappings(MappingStore mappingStore){
         HashMap<Tree,Tree> map = new HashMap<>();
         for (Mapping cur : mappingStore) {
             map.put(cur.first, cur.second);
         }
         return map;
+    }
+
+    public SrcDstRange locateIfLineRange(){
+        SrcDstRange positionRange = new SrcDstRange();
+        srcCompilationUnit.accept(new ASTVisitor() {
+              // Visit the IfStatement nodes
+              @Override
+              public boolean visit(IfStatement node) {
+                  positionRange.getSrcRange().add(
+                          Range.closedOpen(node.getStartPosition(),
+                                  node.getStartPosition()+node.getLength()));
+                  return super.visit(node);
+              }
+        }
+        );
+        dstCompilationUnit.accept(new ASTVisitor() {
+              // Visit the IfStatement nodes
+              @Override
+              public boolean visit(IfStatement node) {
+                  positionRange.getDstRange().add(
+                          Range.closedOpen(node.getStartPosition(),
+                                  node.getStartPosition()+node.getLength()));
+                  return super.visit(node);
+              }
+          }
+        );
+        return RangeOperations.toLineRange(positionRange, srcCompilationUnit, dstCompilationUnit);
     }
 
 }

@@ -40,6 +40,16 @@ public class EditScriptStorer{
         this.changedLines = new SrcDstRange();
     }
 
+    public EditScriptStorer(final EditScript editScript,
+                            final MappingStore mappingStore,
+                            final SourcePair sourcePair){
+        this.editScript = editScript;
+        this.mappingStore = mappingStore;
+        this.srcCompilationUnit = sourcePair.getSrcCompilationUnit();
+        this.dstCompilationUnit = sourcePair.getDstCompilationUnit();
+        this.changedLines = new SrcDstRange();
+    }
+
     public static EditScriptStorer of(final EditScript editScript,
                                       final MappingStore mappingStore,
                                       final CompilationUnit srcCompilationUnit,
@@ -50,7 +60,7 @@ public class EditScriptStorer{
     public static EditScriptStorer of(final EditScript editScript,
                                       final MappingStore mappingStore,
                                       final SourcePair sourcePair){
-        return new EditScriptStorer(editScript, mappingStore, sourcePair.getSrcCompilationUnit(), sourcePair.getDstCompilationUnit());
+        return new EditScriptStorer(editScript, mappingStore, sourcePair);
     }
 
     public void addChangedLineRanges(DiffFormatter diffFormatter, DiffEntry diffEntry){

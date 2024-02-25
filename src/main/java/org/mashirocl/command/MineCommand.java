@@ -9,17 +9,13 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.Edit;
 import org.mashirocl.dao.MinedMicroChange;
-import org.mashirocl.editscript.ActionRetriever;
-import org.mashirocl.editscript.DiffEditScriptWithSource;
-import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.editscript.*;
 import org.mashirocl.match.ActionLocator;
 import org.mashirocl.match.ActionStatus;
 import org.mashirocl.match.PatternMatcher;
 import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.microchange.*;
-import org.mashirocl.editscript.EditScriptExtractor;
 import org.mashirocl.util.CommitMapper;
 import org.mashirocl.util.LinkAttacher;
 import org.mashirocl.util.MicroChangeWriter;
@@ -34,7 +30,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 /**
  * @author mashirocl@gmail.com
@@ -113,7 +108,7 @@ public class MineCommand implements Callable<Integer> {
 //            !commitID.contains("616c17334c200831a752915ceb1ff3bc4633c9f3")&&
 //            !commitID.contains("e4b5f990962a323075b80e099aa22b0694ebd73a")&&
 //            !commitID.contains("3a01485a88cf57d1907385d6715e0fce8ed8a785")&&
-//            !commitID.contains("4c9d7f7acf4ac1eaf6fdbfdf09a2e6da226e36b1")&&
+//            !commitID.contains("4c9d7f7acf4ac1eaf6fdbfdf09a2e6da226e36b1")
 //                            !commitID.contains("28338288ae249cc65da377500a2ac7cd83eede12")&&
 //                            !commitID.contains("4a0541a2cb0bdeb985074700e26045528c32fc75")&&
 //                            !commitID.contains("c83527d229a0441780e0dcb6c8230151bbd4133e")&&
@@ -141,11 +136,11 @@ public class MineCommand implements Callable<Integer> {
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(editScriptStorer.getMappingStore());
                 Map<Tree, List<Action>> nodeActions = ActionRetriever.retrieveMap(editScript);
 
-                System.out.println(editScriptStorer.getChangedLines());
+                SrcDstRange srcDstLineRangeOfIf = new SrcDstRange();
+                if(editScriptStorer instanceof EditScriptStorerIncludeIf){
+                    srcDstLineRangeOfIf = ((EditScriptStorerIncludeIf) editScriptStorer).getSrcDstLineRangeOfIf();
+                }
 
-                //positions for all the change in a single file in a commit
-//                List<Position> changePositions = new LinkedList<>();
-//                SeperatedPosition changePositions = new SeperatedPosition(new LinkedList<>(), new LinkedList<>());
                 RangeSet<Integer> treeActionAdditionRange = TreeRangeSet.create();
                 RangeSet<Integer> treeActionDeletionRange = TreeRangeSet.create();
                 RangeSet<Integer> treeActionMicroChangeAdditionRange = TreeRangeSet.create();
@@ -156,25 +151,28 @@ public class MineCommand implements Callable<Integer> {
 
                 log.info("# of actions {}", editScript.size());
                 for (Action a : editScript) {
-
                     // action node is the descendant of ifstatement or itself is ifstatement
 //                    if(!ActionStatus.isDescendantOfIfStatement(a)) continue;
 //                    log.info("tree node for action is the descendant of if {}", a.getNode().toTreeString());
 
                     // action node is the child of ifstatement or itself is ifstatement
-                    if(!ActionStatus.isChildOfIfStatement(a)) continue;
-                    log.info("tree for action is the child of if {}", a.getNode().toTreeString());
-
-                    numberTotalActionNumber+=1;
+//                    if(!ActionStatus.isChildOfIfStatement(a)) continue;
+//                    log.info("tree for action is the child of if {}", a.getNode().toTreeString());
 
                     //mine micro-changes
                     List<MicroChange> microChanges = patternMatcherGumTree.match(a, mappings, nodeActions, editScriptStorer);
 
-
                     //action location
-//                    changePositions.addAll(actionLocator.getLocation(a, editScriptStorer));
-//                    SeperatedPosition tempPositions = actionLocator.getSeperatedLocations(a, mappings, editScriptStorer);
-                    SrcDstRange treeActionRanges =  actionLocator.getRanges(a, mappings, editScriptStorer);
+                    SrcDstRange treeActionRanges =  actionLocator.getLineRanges(a, mappings, editScriptStorer);
+                    log.info("action locations {}", treeActionRanges);
+
+                    if(!ActionStatus.isInsideIfStatement(treeActionRanges, srcDstLineRangeOfIf)){
+                        log.info("action in {} is skipped", commitID);
+                        continue;
+                    }
+                    numberTotalActionNumber+=1;
+
+
                     treeActionDeletionRange.addAll(treeActionRanges.getSrcRange());
                     treeActionAdditionRange.addAll(treeActionRanges.getDstRange());
 //                    System.out.println("ranges:");
