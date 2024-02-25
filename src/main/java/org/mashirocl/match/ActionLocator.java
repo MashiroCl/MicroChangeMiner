@@ -2,20 +2,18 @@ package org.mashirocl.match;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
-import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 import org.mashirocl.microchange.Position;
 import org.mashirocl.microchange.SrcDstRange;
 
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author mashirocl@gmail.com
@@ -25,27 +23,15 @@ import java.util.stream.Collectors;
 public class ActionLocator {
 
 
-    public Range<Integer> toRange(Tree node) {
-        return Range.closedOpen(node.getPos(), node.getEndPos());
-    }
-
     /**
      * obtaining a range for a node with excluding its children range
      * @return
      */
     private RangeSet<Integer> toRangeOfRoot(Tree node) {
         RangeSet<Integer> result = TreeRangeSet.create();
-        result.add(toRange(node));
-        node.getChildren().forEach(c -> result.remove(toRange(c)));
+        result.add(RangeOperations.toRange(node));
+        node.getChildren().forEach(c -> result.remove(RangeOperations.toRange(c)));
         return result;
-    }
-
-    public Range<Integer> toLineRange(Range<Integer> range, CompilationUnit cu) {
-        return Range.closed(cu.getLineNumber(range.lowerEndpoint()), cu.getLineNumber(range.upperEndpoint()));
-    }
-
-    public RangeSet<Integer> toLineRange(RangeSet<Integer> ranges, CompilationUnit cu) {
-        return TreeRangeSet.create(ranges.asRanges().stream().map(r -> toLineRange(r, cu)).toList());
     }
 
     public SrcDstRange getRanges(Action action, Map<Tree, Tree> mappings, EditScriptStorer editScriptStorer){
@@ -55,24 +41,24 @@ public class ActionLocator {
         CompilationUnit dstCU = editScriptStorer.getDstCompilationUnit();
         switch (action.getName()){
             case "insert-tree":
-                dstRangeSet.add(toLineRange(toRange(action.getNode()), dstCU));
+                dstRangeSet.add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()), dstCU));
                 break;
             case "insert-node":
-                dstRangeSet.addAll(toLineRange(toRangeOfRoot(action.getNode()), dstCU));
+                dstRangeSet.addAll(RangeOperations.toLineRange(toRangeOfRoot(action.getNode()), dstCU));
                 break;
             case "delete-tree":
-                srcRangeSet.add(toLineRange(toRange(action.getNode()), srcCU));
+                srcRangeSet.add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()), srcCU));
                 break;
             case "delete-node":
-                srcRangeSet.addAll(toLineRange(toRangeOfRoot(action.getNode()), srcCU));
+                srcRangeSet.addAll(RangeOperations.toLineRange(toRangeOfRoot(action.getNode()), srcCU));
                 break;
             case "update-node":
-                srcRangeSet.addAll(toLineRange(toRangeOfRoot(action.getNode()), srcCU));
-                dstRangeSet.addAll(toLineRange(toRangeOfRoot(mappings.get(action.getNode())), dstCU));
+                srcRangeSet.addAll(RangeOperations.toLineRange(toRangeOfRoot(action.getNode()), srcCU));
+                dstRangeSet.addAll(RangeOperations.toLineRange(toRangeOfRoot(mappings.get(action.getNode())), dstCU));
                 break;
             case "move-tree":
-                srcRangeSet.add(toLineRange(toRange(action.getNode()), srcCU));
-                dstRangeSet.add(toLineRange(toRange(mappings.get(action.getNode())), dstCU));
+                srcRangeSet.add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()), srcCU));
+                dstRangeSet.add(RangeOperations.toLineRange(RangeOperations.toRange(mappings.get(action.getNode())), dstCU));
                 break;
         }
         return new SrcDstRange(srcRangeSet,dstRangeSet);
