@@ -4,6 +4,7 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -64,59 +65,32 @@ public class DeleteConditionals implements MicroChangePattern{
         SrcDstRange srcDstRange = new SrcDstRange();
         // left side
         // the expression moved out from the if-block
-        Range<Integer> expression = Range.closed(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        Range<Integer> expression = RangeOperations.toLineRange(
+                RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
         );
+
         srcDstRange.getSrcRange().add(expression);
         // being removed if
         if(nodeActions.containsKey(action.getNode().getParent())){
             for(Action a:nodeActions.get(action.getNode().getParent())){
-                System.out.println("action");
-                System.out.println(a);
                 if(a.getName().equals("delete-node") || a.getName().equals("delete-tree")){
-                    srcDstRange.getSrcRange().add(Range.closed(
-                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
-                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())
-                    ));
+                    srcDstRange.getSrcRange().add(
+                            RangeOperations.toLineRange(
+                                    RangeOperations.toRange(a.getNode()), editScriptStorer.getSrcCompilationUnit()
+                            )
+                    );
                 }
             }
         }
 
         // right side
         // the being moved expression, which used to be in the if-block
-        srcDstRange.getDstRange().add(Range.closed(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getEndPos())
-        ));
-
-        //
-
+        srcDstRange.getDstRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(mappings.get(action.getNode())),editScriptStorer.getDstCompilationUnit()
+                )
+        );
         return srcDstRange;
     }
-    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        List<Position> positions = new LinkedList<>();
-        // left side
-        // the expression moved out from the if-block
-        Position expression = new Position(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
-        );
-        positions.add(expression);
-        // being removed if
-        if(nodeActions.containsKey(action.getNode().getParent())){
-            for(Action a:nodeActions.get(action.getNode().getParent())){
-                System.out.println("action");
-                System.out.println(a);
-                if(a.getName().equals("delete-node") || a.getName().equals("delete-tree")){
-                    positions.add(new Position(
-                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
-                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())
-                    ));
-                }
-            }
-        }
 
-        return positions;
-    }
 }

@@ -5,6 +5,7 @@ import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -81,26 +82,17 @@ public class ReverseConditional implements MicroChangePattern{
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
-        srcDstRange.getSrcRange().add(Range.closed(
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
+        srcDstRange.getSrcRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
+                ));
+        srcDstRange.getDstRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(mappings.get(action.getNode())),editScriptStorer.getDstCompilationUnit()
                 )
-        );
-        srcDstRange.getDstRange().add(Range.closed(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getEndPos()))
         );
 
         return srcDstRange;
-    }
-
-    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        List<Position> positions = new LinkedList<>();
-        positions.add(new Position(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
-        ));
-        return positions;
     }
 
 

@@ -5,6 +5,7 @@ import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -41,25 +42,27 @@ public class ConditionalToTernaryOperator implements MicroChangePattern{
         SrcDstRange srcDstRange = new SrcDstRange();
         // left side
         // being moved condition
-        Range<Integer> movedCondition = Range.closed(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
+        Range<Integer> movedCondition = RangeOperations.toLineRange(
+                RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
+        );
         srcDstRange.getSrcRange().add(movedCondition);
         // being removed expressions in Then & Else
         Tree ifStatement = action.getNode().getParent();
         for(Tree node:ifStatement.getChildren()){
             for(Action a: nodeActions.get(node)){
-                srcDstRange.getSrcRange().add(Range.closed(
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())));
+                srcDstRange.getSrcRange().add(
+                        RangeOperations.toLineRange(
+                                RangeOperations.toRange(a.getNode()), editScriptStorer.getSrcCompilationUnit()
+                        ));
             }
         }
         //right side
         // added ternary expression
-        srcDstRange.getDstRange().add(Range.closed(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(((Move)action).getParent().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(((Move)action).getParent().getEndPos())
-        ));
+        srcDstRange.getDstRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(((Move)action).getParent()), editScriptStorer.getDstCompilationUnit()
+                )
+        );
 
         return srcDstRange;
     }

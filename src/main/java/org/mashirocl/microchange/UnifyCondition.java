@@ -4,6 +4,7 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -68,39 +69,16 @@ public class UnifyCondition implements MicroChangePattern{
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
-        srcDstRange.getSrcRange().add(Range.closed(
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
-                )
-        );
-        srcDstRange.getDstRange().add(Range.closed(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getEndPos()))
+        srcDstRange.getSrcRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
+                ));
+        srcDstRange.getDstRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(mappings.get(action.getNode())), editScriptStorer.getDstCompilationUnit())
         );
 
         return srcDstRange;
     }
 
-    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        List<Position> positions = new LinkedList<>();
-        // left side
-        // the not changed part condition/ the being moved condition
-        Position notChangedContidion = new Position(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
-        );
-        positions.add(notChangedContidion);
-        // the being unified if-block
-        if(nodeActions.containsKey(action.getNode().getParent())){
-            for(Action a:nodeActions.get(action.getNode().getParent())){
-                if(a.getName().equals("delete-node") || a.getName().equals("delete-tree")){
-                    positions.add(new Position(
-                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
-                            editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())
-                    ));
-                }
-            }
-        }
-        return positions;
-    }
 }

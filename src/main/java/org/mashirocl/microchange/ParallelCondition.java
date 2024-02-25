@@ -4,6 +4,7 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -104,37 +105,17 @@ public class ParallelCondition implements MicroChangePattern{
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
         // left side
-        Range<Integer> movedCondition = Range.closed(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
+        Range<Integer> movedCondition = RangeOperations.toLineRange(
+                RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
+        );
         // right side
-        Range<Integer> dstCondition = Range.closed(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getChild(0).getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getChild(0).getEndPos()));
+        Range<Integer> dstCondition = RangeOperations.toLineRange(
+                RangeOperations.toRange(mappings.get(action.getNode()).getParent().getChild(0)),editScriptStorer.getDstCompilationUnit());
 
         srcDstRange.getSrcRange().add(movedCondition);
         srcDstRange.getDstRange().add(dstCondition);
 
         return srcDstRange;
-    }
-
-    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        List<Position> positions = new LinkedList<>();
-        // left side
-        Position movedCondition = new Position(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
-//        System.out.println("left side position");
-//        System.out.println(movedCondition);
-        // right side
-        Position dstCondition = new Position(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getChild(0).getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getChild(0).getEndPos()));
-//        System.out.println("dst side position");
-//        System.out.println(dstCondition);
-        positions.add(movedCondition);
-        positions.add(dstCondition);
-        return positions;
     }
 
     private boolean isAnyChildNodeIsMovedToAIfStatement(List<Tree> nodes,Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, Tree skip){

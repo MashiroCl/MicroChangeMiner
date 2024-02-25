@@ -4,6 +4,7 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -50,22 +51,16 @@ public class ConditionalToSwitch implements MicroChangePattern{
         SrcDstRange srcDstRange = new SrcDstRange();
         // left side
         // being moved expression
-        Range<Integer> movedExpression = Range.closed(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos())
-        );
+        Range<Integer> movedExpression = RangeOperations.toLineRange(
+                RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit());
         // the if-statement
-        Range<Integer> ifStatement = Range.closed(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getParent().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getParent().getEndPos())
-        );
+        Range<Integer> ifStatement = RangeOperations.toLineRange(
+                RangeOperations.toRange(action.getNode().getParent()), editScriptStorer.getSrcCompilationUnit());
 
         //right side
         // switch case
-        Range<Integer> switchCase = Range.closed(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(mappings.get(action.getNode()).getParent().getEndPos())
-        );
+        Range<Integer> switchCase = RangeOperations.toLineRange(
+                RangeOperations.toRange(mappings.get(action.getNode()).getParent()), editScriptStorer.getDstCompilationUnit());
 
         srcDstRange.getSrcRange().add(movedExpression);
         srcDstRange.getSrcRange().add(ifStatement);

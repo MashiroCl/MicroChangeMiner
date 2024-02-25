@@ -4,6 +4,7 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
+import org.mashirocl.location.RangeOperations;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -58,20 +59,12 @@ public class ExtendIfWithElse implements MicroChangePattern{
         SrcDstRange srcDstRange = new SrcDstRange();
         //right side
         //added if block
-        srcDstRange.getDstRange().add(Range.closed(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(action.getNode().getEndPos()))
-        );
+        srcDstRange.getDstRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(action.getNode()),editScriptStorer.getDstCompilationUnit()
+                ));
 
         return srcDstRange;
     }
 
-    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        List<Position> positions = new LinkedList<>();
-        positions.add(new Position(
-                editScriptStorer.getDstCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getDstCompilationUnit().getLineNumber(action.getNode().getEndPos())
-        ));
-        return positions;
-    }
 }
