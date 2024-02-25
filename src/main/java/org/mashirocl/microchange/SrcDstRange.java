@@ -23,4 +23,8 @@ public class SrcDstRange {
         srcRange = TreeRangeSet.create();
         dstRange = TreeRangeSet.create();
     }
+
+    public boolean isEmpty(){
+        return srcRange.isEmpty() && dstRange.isEmpty();
+    }
 }
