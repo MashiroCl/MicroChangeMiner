@@ -57,7 +57,6 @@ public class EditScriptStorer{
         try {
             for(Edit edit: diffFormatter.toFileHeader(diffEntry).toEditList()){
                 // edit.getBegin() is 0 based https://archive.eclipse.org/jgit/docs/jgit-2.0.0.201206130900-r/apidocs/org/eclipse/jgit/diff/Edit.html
-                edit.swap(); // A and B is reversed? or the edit is reversed? Observed that the beginA is the destination while the beginB is the source, anyway, use swap() here
                 changedLines.getSrcRange().add(Range.closedOpen(edit.getBeginA()+1, edit.getEndA()+1));
                 changedLines.getDstRange().add(Range.closedOpen(edit.getBeginB()+1, edit.getEndB()+1));
 //                log.info("edit {}, add changed lines {}",edit, changedLines);

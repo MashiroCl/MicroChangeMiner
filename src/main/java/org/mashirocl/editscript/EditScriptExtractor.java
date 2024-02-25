@@ -33,8 +33,6 @@ public class EditScriptExtractor {
     static {
         defaultMatcher = Matchers.getInstance().getMatcher();
         editScriptGenerator = new SimplifiedChawatheScriptGenerator();
-//        editScriptGenerator = new ChawatheScriptGenerator();
-//        editScriptGenerator = new InsertDeleteChawatheScriptGenerator();
     }
 
     public static EditScriptMapping getEditScriptMapping(SourcePair sourcePair){
@@ -66,7 +64,7 @@ public class EditScriptExtractor {
                 }
                 RevTree newTree = commit.getTree();
                 RevTree oldTree = commit.getParent(0).getTree();
-                List<DiffEntry> diffEntryList = diffFormatter.scan(newTree, oldTree);
+                List<DiffEntry> diffEntryList = diffFormatter.scan(oldTree, newTree);
                 // skip the commits which are purely addition or deletion
                 if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
                         || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
