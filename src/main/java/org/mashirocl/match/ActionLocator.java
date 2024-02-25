@@ -31,10 +31,14 @@ public class ActionLocator {
         RangeSet<Integer> result = TreeRangeSet.create();
         result.add(RangeOperations.toRange(node));
         node.getChildren().forEach(c -> result.remove(RangeOperations.toRange(c)));
+        // prevent the excluding result is null
+        if(result.isEmpty()){
+            result.add(RangeOperations.firstPositiontoRange(node));
+        }
         return result;
     }
 
-    public SrcDstRange getRanges(Action action, Map<Tree, Tree> mappings, EditScriptStorer editScriptStorer){
+    public SrcDstRange getLineRanges(Action action, Map<Tree, Tree> mappings, EditScriptStorer editScriptStorer){
         RangeSet<Integer> srcRangeSet = TreeRangeSet.create();
         RangeSet<Integer> dstRangeSet = TreeRangeSet.create();
         CompilationUnit srcCU = editScriptStorer.getSrcCompilationUnit();
@@ -64,32 +68,4 @@ public class ActionLocator {
         return new SrcDstRange(srcRangeSet,dstRangeSet);
     }
 
-    /**
-     * calculate the scopes using start line numbers and end line numbers
-     * Calculated under the case that the start position and end position are in the same file, code changes across multiple
-     * files are not considered
-     * @param positions
-     * @return
-     */
-    public List<Position> scopeCalculate(List<Position> positions){
-        List<Position> scopes = new LinkedList<>();
-        if(positions.isEmpty()){
-            log.error("empty position");
-            return scopes;
-        }
-        positions.sort((Position p1, Position p2)-> p1.getStartPosition()- p2.getStartPosition());
-        scopes.add(positions.get(0));
-        for(int i=1;i<positions.size();i++){
-            Position curPosition = positions.get(i);
-            Position lastScope = scopes.get(scopes.size()-1);
-
-            // no coverage between the current position with the last scope
-            if(lastScope.getEndPosition()<curPosition.getStartPosition()){
-                scopes.add(curPosition);
-            }else { // covered
-                lastScope.setEndPosition(Math.max(curPosition.getEndPosition(), lastScope.getEndPosition()));
-            }
-        }
-        return scopes;
-    }
 }
