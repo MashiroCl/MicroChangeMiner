@@ -5,6 +5,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.mashirocl.microchange.SrcDstRange;
 
 /**
  * @author mashirocl@gmail.com
@@ -21,5 +22,13 @@ public class RangeOperations {
 
     public static RangeSet<Integer> toLineRange(RangeSet<Integer> ranges, CompilationUnit cu) {
         return TreeRangeSet.create(ranges.asRanges().stream().map(r -> toLineRange(r, cu)).toList());
+    }
+
+    public static SrcDstRange toLineRange(SrcDstRange srcDstRange, CompilationUnit srcCU, CompilationUnit dstCU){
+        return new SrcDstRange(toLineRange(srcDstRange.getSrcRange(), srcCU), toLineRange(srcDstRange.getDstRange(),dstCU));
+    }
+
+    public static Range<Integer> firstPositiontoRange(Tree node) {
+        return Range.closedOpen(node.getPos(), node.getPos()+1);
     }
 }
