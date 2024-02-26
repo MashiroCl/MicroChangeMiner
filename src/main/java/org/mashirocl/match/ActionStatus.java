@@ -56,21 +56,14 @@ public class ActionStatus {
         boolean insideSrcIf = false;
         boolean insideDstIf = false;
         if(!lineRanges.getSrcRange().isEmpty() && !srcDstRangeOfIf.getSrcRange().isEmpty()){
-            log.info("src action line ranges {}", lineRanges);
-            log.info("src if line ranges {}", srcDstRangeOfIf);
             insideSrcIf = lineRanges.getSrcRange().asRanges().stream().allMatch(
                     range -> srcDstRangeOfIf.getSrcRange().asRanges().stream().anyMatch(ifRange -> ifRange.encloses(range)));
-            log.info("insideSrcIf {}", insideSrcIf);
         }
         if(!lineRanges.getDstRange().isEmpty() && !srcDstRangeOfIf.getDstRange().isEmpty()){
-            log.info("dst action line ranges {}", lineRanges);
-            log.info("dst if line ranges {}", srcDstRangeOfIf);
             insideDstIf = lineRanges.getDstRange().asRanges().stream().allMatch(
                     range -> srcDstRangeOfIf.getDstRange().asRanges().stream().anyMatch(ifRange -> ifRange.encloses(range)));
-            log.info("insideDstIf {}", insideDstIf);
         }
 
-        log.info("insideSrcIf || insideDstIf: {}", insideSrcIf || insideDstIf);
         return insideSrcIf || insideDstIf;
     }
 }
