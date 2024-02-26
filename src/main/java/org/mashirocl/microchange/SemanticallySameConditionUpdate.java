@@ -2,7 +2,6 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
-import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 
@@ -70,15 +69,15 @@ public class SemanticallySameConditionUpdate implements MicroChangePattern{
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
-        // left side: condition
-        srcDstRange.getSrcRange().add(
-                RangeOperations.toLineRange(
-                        RangeOperations.toRange(action.getNode().getParent().getChild(0)), editScriptStorer.getSrcCompilationUnit()));
-
         // right side: condition
         srcDstRange.getDstRange().add(
                 RangeOperations.toLineRange(
-                        RangeOperations.toRange(mappings.get(action.getNode().getParent()).getChild(0)), editScriptStorer.getDstCompilationUnit()));
+                        RangeOperations.toRange(action.getNode().getParent().getChild(0)), editScriptStorer.getDstCompilationUnit()));
+
+        // left side: condition
+        srcDstRange.getSrcRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(mappings.get(action.getNode().getParent()).getChild(0)), editScriptStorer.getSrcCompilationUnit()));
 
         return srcDstRange;
     }
