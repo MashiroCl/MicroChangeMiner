@@ -79,10 +79,6 @@ public class ChangeBoundaryCondition implements MicroChangePattern{
     }
 
     private boolean isSmallerThanExcludeEqual(Action action, Map<Tree, Tree> mappings){
-        if(action.getName().equals("update-node")
-                && action.getNode().getLabel().equals("<=")
-                && ((Update) action).getValue().equals("<")){
-        }
         return action.getName().equals("update-node")
                 && action.getNode().getLabel().equals("<=")
                 && ((Update) action).getValue().equals("<")
