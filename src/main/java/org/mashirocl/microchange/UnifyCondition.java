@@ -41,7 +41,7 @@ public class UnifyCondition implements MicroChangePattern{
 //            System.out.println(mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(2)));
 //        }
 
-            // two conditions concated with && or ||
+            // two conditions concacted with && or ||
             if((mappings.get(action.getNode()).getParent().getType().name.equals("InfixExpression"))){
                 return mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(0))
                         && mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(2))

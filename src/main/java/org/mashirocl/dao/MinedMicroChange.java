@@ -31,7 +31,7 @@ public class MinedMicroChange {
 
     public MinedMicroChange(String repository, String commitID, String oldPath, String newPath, String type, String action, String position) {
         this.repository = repository;
-        this.commitID = simplifyCommitID(commitID);
+        this.commitID = commitID;
         this.oldPath = oldPath;
         this.newPath = newPath;
         this.type = type;

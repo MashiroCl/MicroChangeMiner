@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.microchange.MicroChange;
 import org.mashirocl.microchange.MicroChangePattern;
+import org.mashirocl.microchange.SrcDstRange;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -48,14 +49,15 @@ public class PatternMatcherGumTree implements PatternMatcher {
         List<MicroChange> microChanges = new LinkedList<>();
         for(MicroChangePattern pattern: microChangePatternList){
             if(pattern.matchConditionGumTree(action, mappings, nodeActions)){
+                SrcDstRange location = pattern.getSrcDstRange(action, mappings, nodeActions, editScriptStorer);
                 microChanges.add(
                         MicroChange.of(
                                 pattern.getClass().getSimpleName(),
                                 action.toString(),
 //                                pattern.getPosition(action, mappings, nodeActions, editScriptStorer)
-                                pattern.getSrcDstRange(action, mappings, nodeActions, editScriptStorer)
+                               location
                         ));
-                log.info("Match found with pattern: {}",pattern.getClass().getSimpleName());
+                log.info("Match found with pattern: {}, locations: {}",pattern.getClass().getSimpleName(), location);
             }
         }
         return microChanges;

@@ -25,7 +25,15 @@ public class ChangeMethodInvocationReceiver implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
         return action.getName().equals("update-node")
-                && action.getNode().getParent().getType().name.equals("METHOD_INVOCATION_RECEIVER");
+                && isParentMethodInvocationReceiver(action.getNode());
+    }
+
+    private boolean isParentMethodInvocationReceiver(Tree node){
+        while(node!=null && !node.isRoot()){
+            if(node.getType().name.equals("METHOD_INVOCATION_RECEIVER")) return true;
+            node = node.getParent();
+        }
+        return false;
     }
 
     @Override

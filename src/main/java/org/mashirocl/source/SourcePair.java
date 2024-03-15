@@ -93,9 +93,14 @@ public class SourcePair{
               // Visit the IfStatement nodes
               @Override
               public boolean visit(IfStatement node) {
+//                  positionRange.getSrcRange().add(
+//                          Range.closedOpen(node.getStartPosition(),
+//                                  node.getStartPosition()+node.getLength()));
+//                  return super.visit(node);
+                  // only conditional
                   positionRange.getSrcRange().add(
-                          Range.closedOpen(node.getStartPosition(),
-                                  node.getStartPosition()+node.getLength()));
+                          Range.closedOpen(node.getExpression().getStartPosition(),
+                                  node.getExpression().getStartPosition()+node.getExpression().getLength()));
                   return super.visit(node);
               }
         }
@@ -104,10 +109,15 @@ public class SourcePair{
               // Visit the IfStatement nodes
               @Override
               public boolean visit(IfStatement node) {
+//                  positionRange.getDstRange().add(
+//                          Range.closedOpen(node.getStartPosition(),
+//                                  node.getStartPosition()+node.getLength()));
+//                  return super.visit(node);
                   positionRange.getDstRange().add(
-                          Range.closedOpen(node.getStartPosition(),
-                                  node.getStartPosition()+node.getLength()));
+                          Range.closedOpen(node.getExpression().getStartPosition(),
+                                  node.getExpression().getStartPosition()+node.getExpression().getLength()));
                   return super.visit(node);
+
               }
           }
         );

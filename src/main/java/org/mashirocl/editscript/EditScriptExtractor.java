@@ -59,7 +59,7 @@ public class EditScriptExtractor {
                 count++;
                 log.info("Getting edit script for {}, #{}", commit.getId().name(), count);
                 if (commit.getParents().length == 0) {
-                    log.info("parent number is 0, skipped");
+//                    log.info("parent number is 0, skipped");
                     continue;
                 }
                 RevTree newTree = commit.getTree();
@@ -69,7 +69,7 @@ public class EditScriptExtractor {
                 if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
                         || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
                 {
-                    log.info("Purely addition or deletion, skipped");
+//                    log.info("Purely addition or deletion, skipped");
                     continue;
                 }
                 List<DiffEditScriptWithSource> diffEditScripts = new LinkedList<>();
@@ -83,7 +83,7 @@ public class EditScriptExtractor {
                             !newPath.contains(".java") &&
                             !oldPath.contains(".mjava") &&
                             !newPath.contains(".mjava")){
-                        log.info("Change not to source code file, oldpath: {}, newpath: {}", oldPath, newPath);
+//                        log.info("Change not to source code file, oldpath: {}, newpath: {}", oldPath, newPath);
                         continue;
                     }
 
@@ -110,7 +110,7 @@ public class EditScriptExtractor {
                     processed_method_count++;
                 }
 
-                res.put(commit.getId().toString(), diffEditScripts);
+                res.put(commit.getId().name(), diffEditScripts);
             }
             log.info("Edit script computed, {} methods processed", processed_method_count);
             return res;

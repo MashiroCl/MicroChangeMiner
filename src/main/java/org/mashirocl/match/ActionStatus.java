@@ -2,6 +2,7 @@ package org.mashirocl.match;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import com.google.common.collect.Range;
 import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.microchange.SrcDstRange;
 
@@ -52,18 +53,35 @@ public class ActionStatus {
      * @param
      * @return
      */
-    public static boolean isInsideIfStatement(SrcDstRange lineRanges, SrcDstRange srcDstRangeOfIf){
-        boolean insideSrcIf = false;
-        boolean insideDstIf = false;
-        if(!lineRanges.getSrcRange().isEmpty() && !srcDstRangeOfIf.getSrcRange().isEmpty()){
-            insideSrcIf = lineRanges.getSrcRange().asRanges().stream().allMatch(
-                    range -> srcDstRangeOfIf.getSrcRange().asRanges().stream().anyMatch(ifRange -> ifRange.encloses(range)));
+    public static boolean isSubsetOfAnotherRange(SrcDstRange smallerRange, SrcDstRange largerRange){
+        boolean isSubsetSrc = false;
+        boolean isSubsetDst = false;
+        if(!smallerRange.getSrcRange().isEmpty() && !largerRange.getSrcRange().isEmpty()){
+            isSubsetSrc = smallerRange.getSrcRange().asRanges().stream().allMatch(
+                    range -> largerRange.getSrcRange().asRanges().stream().anyMatch(ifRange -> ifRange.encloses(range)));
         }
-        if(!lineRanges.getDstRange().isEmpty() && !srcDstRangeOfIf.getDstRange().isEmpty()){
-            insideDstIf = lineRanges.getDstRange().asRanges().stream().allMatch(
-                    range -> srcDstRangeOfIf.getDstRange().asRanges().stream().anyMatch(ifRange -> ifRange.encloses(range)));
+        if(!smallerRange.getDstRange().isEmpty() && !largerRange.getDstRange().isEmpty()){
+            isSubsetDst = smallerRange.getDstRange().asRanges().stream().allMatch(
+                    range -> largerRange.getDstRange().asRanges().stream().anyMatch(ifRange -> ifRange.encloses(range)));
         }
 
-        return insideSrcIf || insideDstIf;
+
+
+        return isSubsetSrc || isSubsetDst;
     }
+
+
+    public static boolean hasIntersection(SrcDstRange a, SrcDstRange b){
+        boolean hasIntersectionSrc = false;
+        boolean hasIntersectionDst = false;
+        if(!a.getSrcRange().isEmpty() && !b.getSrcRange().isEmpty()){
+            hasIntersectionSrc = a.getSrcRange().asRanges().stream().anyMatch(range -> !b.getSrcRange().subRangeSet(range).isEmpty());
+        }
+        if(!a.getDstRange().isEmpty() && !b.getDstRange().isEmpty()){
+            hasIntersectionDst = a.getDstRange().asRanges().stream().anyMatch(range -> !b.getDstRange().subRangeSet(range).isEmpty());
+        }
+        return hasIntersectionSrc || hasIntersectionDst;
+
+    }
+
 }

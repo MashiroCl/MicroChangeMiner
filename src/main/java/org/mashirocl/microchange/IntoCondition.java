@@ -4,26 +4,28 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
+import org.mashirocl.microchange.common.NodePosition;
 
 import java.util.List;
 import java.util.Map;
 
 /**
  * @author mashirocl@gmail.com
- * @since 2024/02/27 11:10
+ * @since 2024/02/27 16:11
  */
-public class InsertConditionBlock implements MicroChangePattern{
+public class IntoCondition implements MicroChangePattern{
     /**
-     * The if-block is purely added: e.g. https://github.com/bennidi/mbassador/commit/d6aa291b8662849033a1d8ec0772babd6e3ef166#diff-38069dbc75fc0de230b3daec833ab771c1461df4ebabffe06411e75d828b846fR48
-     * condition:
-     * for one action in the edit script
-     * 1. is `insert-tree`/`insert-node`
-     * 2. action node is IfStatement
+     * move a tree, which is not under a if to a if
+     * @param action
+     * @param mappings
      * @return
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-        return (action.getName().equals("insert-tree") || action.getName().equals("insert-node")) && action.getNode().getType().name.equals("IfStatement");
+        return action.getName().equals("move-tree")
+                && NodePosition.isInIf(action.getNode())==null
+                && mappings.containsKey(action.getNode())
+                && NodePosition.isInIf(mappings.get(action.getNode()))!=null;
     }
 
     @Override
@@ -34,7 +36,9 @@ public class InsertConditionBlock implements MicroChangePattern{
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
-        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
+        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
+                editScriptStorer.getSrcCompilationUnit()));
+        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(mappings.get(action.getNode())),
                 editScriptStorer.getDstCompilationUnit()));
         return srcDstRange;
     }

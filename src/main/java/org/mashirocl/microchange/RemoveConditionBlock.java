@@ -23,7 +23,12 @@ public class RemoveConditionBlock implements MicroChangePattern{
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-        return action.getName().equals("delete-tree") && action.getNode().getType().name.equals("IfStatement");
+        return action.getName().equals("delete-tree")
+                && (action.getNode().getType().name.equals("IfStatement")
+//                || (action.getNode().getType().name.equals("Block")
+//                && action.getNode().getChild(0).getType().name.equals("IfStatement"))  // if-else will be regarded as a block whose first child is ifstatement instead of a ifstatement
+                                                                                                // e.g. https://github.com/bennidi/mbassador/commit/6aadcbe036b535732ef54f49cebc6498eb3f2d62#diff-f22cf66dd16218616d65318a7d619e2da1a4721f765feed134a91d1d86d59c80L355
+        );
     }
 
     @Override
