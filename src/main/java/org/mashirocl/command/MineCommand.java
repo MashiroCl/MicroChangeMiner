@@ -86,13 +86,13 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ChangeBoundaryCondition());
         patternMatcherGumTree.addMicroChange(new RemoveConditionBlock());
         patternMatcherGumTree.addMicroChange(new InsertConditionBlock());
-//        patternMatcherGumTree.addMicroChange(new ChangeMethodInvocationReceiver());
-//        patternMatcherGumTree.addMicroChange(new ChangeMethodInvocation());
         patternMatcherGumTree.addMicroChange(new IntoCondition());
         patternMatcherGumTree.addMicroChange(new AddAdditionalCondition());
         patternMatcherGumTree.addMicroChange(new SimplifyConditional());
+        patternMatcherGumTree.addMicroChange(new AddCurlyBrace());
+        patternMatcherGumTree.addMicroChange(new RemoveCurlyBrace());
 
-//        TODO: Not finished
+//        TODO: Not finished should remove this (also on the remote repo)
 //        patternMatcherGumTree.addMicroChange(new ReplaceVariableWithExpression());
     }
 
@@ -136,10 +136,11 @@ public class MineCommand implements Callable<Integer> {
         int[] microADChangeCoveredLines = new int[]{0, 0};
         int[] textDiffLines = new int[]{0, 0};
         int[] refCoveredLines = new int[]{0, 0};
-        int[] refCoveredMicroChange = new int []{0,0};
+        int [] refCoveredCondition = new int[]{0, 0};
+        int [] mrADChangeCoveredLines = new int[]{0,0};
 
         for (String commitID : res.keySet()) {
-//            if(!commitID.contains("7bcc5ef98b324a0ac0c267b2b7bc4d795ed13628"))
+//            if(!commitID.contains("3626ca6ec151c679dd5140b8c82dc92d24321d87"))
 //                continue;
             count++;
             log.info("Mining {}/{} {}...", count, total_count, commitID);
@@ -147,7 +148,7 @@ public class MineCommand implements Callable<Integer> {
             List<Refactoring> refactoringList = refMap.get(commitID);
 
             for (DiffEditScriptWithSource diffEditScriptWithSource : res.get(commitID)) {
-//                log.info("DiffEditScriptWithSource {}", diffEditScriptWithSource);
+                log.info("DiffEditScriptWithSource {}", diffEditScriptWithSource);
                 EditScript editScript = diffEditScriptWithSource.getEditScript();
                 EditScriptStorer editScriptStorer = diffEditScriptWithSource.getEditScriptStorer();
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(editScriptStorer.getMappingStore());
@@ -163,7 +164,6 @@ public class MineCommand implements Callable<Integer> {
 //                    log.info("if condition not included, skipped");
                     continue;
                 }
-
 
                 RangeSet<Integer> treeActionAdditionRange = TreeRangeSet.create();
                 RangeSet<Integer> treeActionDeletionRange = TreeRangeSet.create();
@@ -181,12 +181,8 @@ public class MineCommand implements Callable<Integer> {
 
 
                     if (!ActionStatus.hasIntersection(treeActionRanges, srcDstLineRangeOfIf)) {
-//                        log.info("action and if has no intersection, skipped ");
                         continue;
                     }
-//                    log.info("action is {}", a);
-//                    log.info("action parent is {}", a.getNode().getParent());
-//                    log.info("action locations {}", treeActionRanges);
                     numberTotalActionNumber += 1;
 
 
@@ -200,7 +196,7 @@ public class MineCommand implements Callable<Integer> {
                         treeActionMicroChangeDeletionRange.addAll(microChange.getSrcDstRange().getSrcRange());
                         treeActionMicroChangeAdditionRange.addAll(microChange.getSrcDstRange().getDstRange());
                     }
-                    log.info("treeActionMicroChangeAdditionRange: {}", treeActionMicroChangeAdditionRange);
+//                    log.info("treeActionMicroChangeAdditionRange: {}", treeActionMicroChangeAdditionRange);
 //                    microChangePositions.addAll(microChanges.stream().flatMap(p->p.getPositions().stream()).toList());
 //
                     minedMicroChanges.addAll(microChanges.stream()
@@ -215,6 +211,27 @@ public class MineCommand implements Callable<Integer> {
                     numberMicroChangeContainedAction += 1;
 
                 }
+
+                // include the refactoring covered lines
+                SrcDstRange inConditionRefRange = new SrcDstRange();
+                if (refactoringList != null) {
+                    inConditionRefRange = getInConditionRefactoringRange(diffEditScriptWithSource, refactoringList, srcDstLineRangeOfIf);
+                    // exclude
+//                    srcDstLineRangeOfIf.setSrcRange(rangeSetDifference(srcDstLineRangeOfIf.getSrcRange(),  inConditionRefRange.getSrcRange()));
+//                    srcDstLineRangeOfIf.setDstRange(rangeSetDifference(srcDstLineRangeOfIf.getDstRange(),  inConditionRefRange.getDstRange()));
+                }
+                // include
+                RangeSet tempSrc = TreeRangeSet.create(inConditionRefRange.getSrcRange());
+                RangeSet tempDst = TreeRangeSet.create(inConditionRefRange.getDstRange());
+                tempSrc.addAll(treeActionMicroChangeDeletionRange);
+                tempDst.addAll(treeActionMicroChangeAdditionRange);
+                tempSrc.removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
+                tempDst.removeAll(srcDstLineRangeOfIf.getDstRange().complement());
+                tempSrc.removeAll(treeActionDeletionRange.complement());
+                tempDst.removeAll(treeActionAdditionRange.complement());
+                mrADChangeCoveredLines[0]+=coveredLength(tempSrc);
+                mrADChangeCoveredLines[1]+=coveredLength(tempDst);
+
 
 
                 // action touched if range
@@ -244,12 +261,23 @@ public class MineCommand implements Callable<Integer> {
                     totalADCodeChangeLines[1] += coveredLength(treeActionAdditionRange);
                 }
 
+
+                if (refactoringList != null) {
+                    // ref covered intersect action covered (discuss all the code changes under the context of being covered GumTree action)
+                    inConditionRefRange.getSrcRange().removeAll(treeActionDeletionRange.complement());
+                    inConditionRefRange.getDstRange().removeAll(treeActionAdditionRange.complement());
+                    refCoveredLines[0] += coveredLength(inConditionRefRange.getSrcRange());
+                    refCoveredLines[1] += coveredLength(inConditionRefRange.getDstRange());
+                }
+
                 if (!treeActionMicroChangeDeletionRange.isEmpty()) {
                     //intersection of text range and tree range
                     treeActionMicroChangeDeletionRange.removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
                     // intersection of micro-change range with tree range: because the calculation of micro-change range is not using the action node, while the tree range is, sometimes
                     // the micro-change covers a larger range than the tree range.
                     treeActionMicroChangeDeletionRange.removeAll(treeActionDeletionRange.complement());
+                    // exclude the refactoring coverage
+//                    treeActionMicroChangeDeletionRange = rangeSetDifference(treeActionMicroChangeDeletionRange, inConditionRefRange.getSrcRange());
                     log.info("treeActionMicroChangeDeletionRange: micro-change covered deleted lines {}", treeActionMicroChangeDeletionRange);
                     microADChangeCoveredLines[0] += coveredLength(treeActionMicroChangeDeletionRange);
                 }
@@ -260,32 +288,13 @@ public class MineCommand implements Callable<Integer> {
                     // intersection of micro-change range with tree range: because the calculation of micro-change range is not using the action node, while the tree range is, sometimes
                     // the micro-change covers a larger range than the tree range.
                     treeActionMicroChangeAdditionRange.removeAll(treeActionAdditionRange.complement());
+                    // exclude the refactoring coverage
+//                    treeActionMicroChangeAdditionRange = rangeSetDifference(treeActionMicroChangeAdditionRange, inConditionRefRange.getDstRange());
                     log.info("treeActionMicroChangeAdditionRange: micro-change covered added lines {}", treeActionMicroChangeAdditionRange);
                     microADChangeCoveredLines[1] += coveredLength(treeActionMicroChangeAdditionRange);
                 }
 
-                if (refactoringList != null) {
-                    // in condition refactoring range
-//                    Map<Refactoring, SrcDstRange> inConditionRefRange = getInConditionRefactoringRange(diffEditScriptWithSource, refactoringList, srcDstLineRangeOfIf);
-                    SrcDstRange inConditionRefRange = getInConditionRefactoringRange(diffEditScriptWithSource, refactoringList, srcDstLineRangeOfIf);
-                    // ref covered intersect action covered (discuss all the code changes under the context of being covered GumTree action)
-                    inConditionRefRange.getSrcRange().removeAll(treeActionDeletionRange.complement());
-                    inConditionRefRange.getDstRange().removeAll(treeActionAdditionRange.complement());
-                    refCoveredLines[0] += coveredLength(inConditionRefRange.getSrcRange());
-                    refCoveredLines[1] += coveredLength(inConditionRefRange.getDstRange());
 
-                    // intersection of refactoring cover and micro-change
-                    if(!treeActionDeletionRange.isEmpty()){
-                        inConditionRefRange.getSrcRange().removeAll(treeActionDeletionRange.complement());
-                        refCoveredMicroChange[0] += coveredLength(inConditionRefRange.getSrcRange());
-                    }
-
-                    if(!treeActionAdditionRange.isEmpty()){
-                        inConditionRefRange.getDstRange().removeAll(treeActionAdditionRange.complement());
-                        refCoveredMicroChange[1] += coveredLength(inConditionRefRange.getDstRange());
-                    }
-
-                }
 
                 RangeSet<Integer> srcNotCovered =  notCoveredRange(treeActionDeletionRange, treeActionMicroChangeDeletionRange);
                 RangeSet<Integer> dstNotCovered =  notCoveredRange(treeActionAdditionRange, treeActionMicroChangeAdditionRange);
@@ -322,11 +331,16 @@ public class MineCommand implements Callable<Integer> {
             }
         }
 
+//        log.info("if lines src: {}",ifConditionLines[0]);
+//        log.info("if lines dst: {}",ifConditionLines[1]);
+
         logTreeDALines(totalADCodeChangeLines);
         logTextDALines(textDiffLines);
         logMicroChangeCoveredDALines(microADChangeCoveredLines);
         logMicroChangeCoverageRatio(microADChangeCoveredLines, totalADCodeChangeLines);
-        logRefactoringCoverageRatio(refCoveredLines, refCoveredMicroChange, totalADCodeChangeLines, microADChangeCoveredLines);
+//        logRefactoringCoverageRatio(refCoveredLines, refCoveredMicroChange, totalADCodeChangeLines, microADChangeCoveredLines);
+        logMicroChangeWithRefCoveregeRatio(mrADChangeCoveredLines, totalADCodeChangeLines);
+        logRefactoringCoverageRatio(refCoveredCondition);
         logActions(numberTotalActionNumber, numberMicroChangeContainedAction);
 
         log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
@@ -362,6 +376,13 @@ public class MineCommand implements Callable<Integer> {
         return coveredLength;
     }
 
+    private static RangeSet<Integer> rangeSetDifference(RangeSet<Integer> setA, RangeSet<Integer> setB) {
+        RangeSet<Integer> result = TreeRangeSet.create(setA);
+        for (Range<Integer> range : setB.asRanges()) {
+            result.remove(range);
+        }
+        return result;
+    }
 
     public static SrcDstRange getInConditionRefactoringRange(DiffEditScriptWithSource diffEditScriptWithSource, List<Refactoring> refactoringList, SrcDstRange srcDstLineRangeOfIf) {
         SrcDstRange range = new SrcDstRange();
@@ -424,17 +445,28 @@ public class MineCommand implements Callable<Integer> {
         log.info("removed lines covered by micro-change: {}", microADChangeCoveredLines[0]);
         log.info("added lines covered by micro-change: {}", microADChangeCoveredLines[1]);
     }
+
+    public static void logMicroChangeWithRefCoveregeRatio(int [] mrADChangeCoveredLines, int [] totalADCodeChangeLines){
+        log.info("(removed lines covered by micro-change U ref)/number of total lines of tree code deleted: {}/{}=" + String.format("%.4f", (float) mrADChangeCoveredLines[0] / totalADCodeChangeLines[0]), mrADChangeCoveredLines[0], totalADCodeChangeLines[0]);
+        log.info("(added lines covered by micro-change U ref)/number of total lines of tree code added: {}/{}=" + String.format("%.4f", (float) mrADChangeCoveredLines[1] / totalADCodeChangeLines[1]), mrADChangeCoveredLines[1], totalADCodeChangeLines[1]);
+
+    }
     public static void logMicroChangeCoverageRatio(int [] microADChangeCoveredLines, int [] totalADCodeChangeLines){
         log.info("micro-change covered deleted lines/number of total lines of tree code deleted: {}/{}=" + String.format("%.4f", (float) microADChangeCoveredLines[0] / totalADCodeChangeLines[0]), microADChangeCoveredLines[0], totalADCodeChangeLines[0]);
         log.info("micro-change covered added lines/number of total lines of tree code added: {}/{}=" + String.format("%.4f", (float) microADChangeCoveredLines[1] / totalADCodeChangeLines[1]), microADChangeCoveredLines[1], totalADCodeChangeLines[1]);
     }
-    public static void logRefactoringCoverageRatio(int [] refCoveredLines, int [] refCoveredMicroChange,int [] totalADCodeChangeLines,int []  microADChangeCoveredLines){
-        log.info("refactoring covered deleted lines/number of total lines of tree code deleted: {}/{}=" + String.format("%.4f", (float) refCoveredLines[0] / totalADCodeChangeLines[0]), refCoveredLines[0], totalADCodeChangeLines[0]);
-        log.info("refactoring covered added lines/number of total lines of tree code added: {}/{}=" + String.format("%.4f", (float) refCoveredLines[1] / totalADCodeChangeLines[1]), refCoveredLines[1], totalADCodeChangeLines[1]);
-        log.info("refactoring covered micro-change deleted lines/micro-change covered deleted lines: {}/{}=" + String.format("%.4f", (float) refCoveredMicroChange[0] / microADChangeCoveredLines[0]), refCoveredMicroChange[0], microADChangeCoveredLines[0]);
-        //TODO fix bug here, the number is incorrects
-        log.info("refactoring covered micro-change added lines/micro-change covered added lines: {}/{}=" + String.format("%.4f", (float) refCoveredMicroChange[1] / microADChangeCoveredLines[1]), refCoveredMicroChange[1], microADChangeCoveredLines[1]);
+//    public static void logRefactoringCoverageRatio(int [] refCoveredLines, int [] refCoveredMicroChange,int [] totalADCodeChangeLines,int []  microADChangeCoveredLines){
+//        log.info("refactoring covered deleted lines/number of total lines of tree code deleted: {}/{}=" + String.format("%.4f", (float) refCoveredLines[0] / totalADCodeChangeLines[0]), refCoveredLines[0], totalADCodeChangeLines[0]);
+//        log.info("refactoring covered added lines/number of total lines of tree code added: {}/{}=" + String.format("%.4f", (float) refCoveredLines[1] / totalADCodeChangeLines[1]), refCoveredLines[1], totalADCodeChangeLines[1]);
+//        log.info("refactoring covered micro-change deleted lines/micro-change covered deleted lines: {}/{}=" + String.format("%.4f", (float) refCoveredMicroChange[0] / microADChangeCoveredLines[0]), refCoveredMicroChange[0], microADChangeCoveredLines[0]);
+//        log.info("refactoring covered micro-change added lines/micro-change covered added lines: {}/{}=" + String.format("%.4f", (float) refCoveredMicroChange[1] / microADChangeCoveredLines[1]), refCoveredMicroChange[1], microADChangeCoveredLines[1]);
+//    }
+
+    public static void logRefactoringCoverageRatio(int [] refCoveredCondition){
+        log.info("refactoring covered deleted conditional lines :{}", refCoveredCondition[0]);
+        log.info("refactoring covered added conditional lines :{}", refCoveredCondition[1]);
     }
+
     public static void logActions(int numberTotalActionNumber, int numberMicroChangeContainedAction){
         log.info("Total number of actions: {}", numberTotalActionNumber);
         log.info("Micro-change contained actions: {}", numberMicroChangeContainedAction);
