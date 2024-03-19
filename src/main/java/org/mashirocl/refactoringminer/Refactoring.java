@@ -17,6 +17,7 @@ import java.util.List;
 @Setter
 @ToString
 @Slf4j
+@AllArgsConstructor
 public class Refactoring {
     private String type;
     private List<SideLocation> leftSideLocations = new LinkedList<>();
