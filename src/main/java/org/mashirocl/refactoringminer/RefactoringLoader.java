@@ -105,7 +105,7 @@ public class RefactoringLoader {
     }
 
     public static boolean isSpecialCases(Refactoring refactoring){
-        // is Extract related
+        // is Extract related (e.g. Extract Method, Extract Method)
         return refactoring.getType().contains("Extract");
 
     }
