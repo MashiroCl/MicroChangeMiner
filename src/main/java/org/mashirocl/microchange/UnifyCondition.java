@@ -5,6 +5,7 @@ import com.github.gumtreediff.tree.Tree;
 import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
+import org.mashirocl.microchange.common.NodePosition;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -17,46 +18,30 @@ import java.util.Map;
 public class UnifyCondition implements MicroChangePattern{
     /**
      * is `move-tree`
-     * it is moved to a `InfixExpression` or `PrefixExpression`
-     * the parent of the moved target is a `IfStatement`
-     * the conditions in the InfixExpression should exist before the unify
+     * it is moved from one conditional expression to another conditional expression
+     * the two conditional expression should be in the same logical-level
      * @param action
      * @param mappings
      * @return
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-        if(action.getName().equals("move-tree")
-                && action.getNode().getParent().getType().name.equals("IfStatement")
-                && mappings.containsKey(action.getNode())){
-
-//        if(mappings.containsKey(action.getNode())) {
-//            System.out.println(action.getNode());
-//            System.out.println(mappings.get(action.getNode()).getParent().getType().name);
-//            System.out.println(mappings.get(action.getNode()).getParent().getChild(0));
-//            System.out.println(mappings.get(action.getNode()).getParent().getChild(1));
-//            System.out.println(mappings.get(action.getNode()).getParent().getChild(2));
-//            System.out.println(mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(0)));
-//            System.out.println(mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(1)));
-//            System.out.println(mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(2)));
-//        }
-
-            // two conditions concacted with && or ||
-            if((mappings.get(action.getNode()).getParent().getType().name.equals("InfixExpression"))){
-                return mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(0))
-                        && mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(2))
-                        && mappings.get(action.getNode()).getParent().getParent().getType().name.equals("IfStatement");
+        if(action.getName().equals("move-tree")){
+            Tree beforeMoveConditionNodeX = NodePosition.isConditionExpression(action.getNode());
+            if(beforeMoveConditionNodeX!=null && mappings.containsKey(action.getNode())){
+                Tree beforeMoveIfNodeX = beforeMoveConditionNodeX.getParent();
+                Tree afterMoveConditionNodeY = NodePosition.isConditionExpression(mappings.get(action.getNode()));
+              if(afterMoveConditionNodeY!=null){
+                  // in the same logical level
+                  if(mappings.containsKey(afterMoveConditionNodeY.getParent())){
+                      Tree beforeMoveIfNodeY = mappings.get(afterMoveConditionNodeY.getParent());
+                      return !NodePosition.isDescedantOf(beforeMoveIfNodeY, beforeMoveIfNodeX) && !NodePosition.isDescedantOf(beforeMoveIfNodeX, beforeMoveIfNodeX);
+                  }
+              }
             }
 
-            // exist prefix condition?
-//            if((mappings.get(action.getNode()).getParent().getType().name.equals("PrefixExpression"))){
-//                return mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(0))
-//                        && mappings.containsKey(mappings.get(action.getNode()).getParent().getChild(2))
-//                        && mappings.get(action.getNode()).getParent().getParent().getType().name.equals("IfStatement");
-//            }
+
         }
-
-
         return false;
     }
 
@@ -69,13 +54,26 @@ public class UnifyCondition implements MicroChangePattern{
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
+        // left side
+        //before move condition X
+        Tree beforeMoveConditionNodeX = NodePosition.isConditionExpression(action.getNode());
         srcDstRange.getSrcRange().add(
                 RangeOperations.toLineRange(
-                        RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
+                        RangeOperations.toRange(beforeMoveConditionNodeX), editScriptStorer.getSrcCompilationUnit()
                 ));
+        //before move condition Y
+        Tree afterMoveConditionNodeY = NodePosition.isConditionExpression(mappings.get(action.getNode()));
+        Tree beforeMoveConditionY = mappings.get(afterMoveConditionNodeY.getParent()).getChild(0);
+        srcDstRange.getSrcRange().add(
+                RangeOperations.toLineRange(
+                        RangeOperations.toRange(beforeMoveConditionY), editScriptStorer.getSrcCompilationUnit()
+                ));
+
+        //right side
+        // after move condition Y
         srcDstRange.getDstRange().add(
                 RangeOperations.toLineRange(
-                        RangeOperations.toRange(mappings.get(action.getNode())), editScriptStorer.getDstCompilationUnit())
+                        RangeOperations.toRange(afterMoveConditionNodeY), editScriptStorer.getDstCompilationUnit())
         );
 
         return srcDstRange;

@@ -38,4 +38,9 @@ public class NodePosition {
         }
         return null;
     }
+
+
+    public static boolean isDescedantOf(Tree child, Tree parent){
+        return parent.getDescendants().contains(child);
+    }
 }
