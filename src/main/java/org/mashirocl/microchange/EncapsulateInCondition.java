@@ -13,7 +13,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/02/27 16:11
  */
-public class IntoCondition implements MicroChangePattern{
+public class EncapsulateInCondition implements MicroChangePattern{
     /**
      * move a tree, which is not under a if to a if
      * @param action
