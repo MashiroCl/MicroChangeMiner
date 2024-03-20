@@ -19,19 +19,28 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class MicroChangeDAO {
     @JsonProperty("type")
     private String type;
     // micro change types now will have only one set of left/right side location, set it as a list for the future
     @JsonProperty("leftSideLocations")
-    private List<SideLocation> leftSideLocations;
+    private List<SideLocationDAO> leftSideLocations;
     @JsonProperty("rightSideLocations")
-    private List<SideLocation> rightSideLocations;
+    private List<SideLocationDAO> rightSideLocations;
 
     public MicroChangeDAO(MicroChangeFileSpecified microChange){
         type = microChange.getType();
-        leftSideLocations = microChange.getLeftSideLocations();
-        rightSideLocations = microChange.getRightSideLocations();
+        leftSideLocations = new LinkedList<>();
+        rightSideLocations = new LinkedList<>();
+        microChange.getLeftSideLocations().forEach(p->leftSideLocations.add(new SideLocationDAO(p)));
+        microChange.getRightSideLocations().forEach(p->rightSideLocations.add(new SideLocationDAO(p)));
+    }
+
+    public MicroChangeDAO(String type, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations){
+        this.type = type;
+        this.leftSideLocations = new LinkedList<>();
+        this.rightSideLocations = new LinkedList<>();
+        leftSideLocations.forEach(p->this.leftSideLocations.add(new SideLocationDAO(p)));
+        rightSideLocations.forEach(p->this.rightSideLocations.add(new SideLocationDAO(p)));
     }
 }

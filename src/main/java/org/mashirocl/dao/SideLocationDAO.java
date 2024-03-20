@@ -18,7 +18,7 @@ import org.mashirocl.refactoringminer.SideLocation;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SideLocationDAO {
-    @JsonProperty("filePath")
+    @JsonProperty("path")
     private String filePath;
     @JsonProperty("startLine")
     private int startLine;
@@ -35,6 +35,10 @@ public class SideLocationDAO {
         filePath = sideLocation.getPath().toString();
         startLine = sideLocation.getRange().lowerEndpoint();
         endLine = sideLocation.getRange().upperEndpoint();
+    }
+
+    public String toString(){
+        return filePath+"["+startLine+","+endLine+"]";
     }
 
 }

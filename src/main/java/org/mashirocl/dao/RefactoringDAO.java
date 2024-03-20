@@ -9,6 +9,7 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.mashirocl.refactoringminer.Refactoring;
 import org.mashirocl.refactoringminer.SideLocation;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -24,13 +25,15 @@ public class RefactoringDAO {
     @JsonProperty("type")
     private String type;
     @JsonProperty("leftSideLocations")
-    private List<SideLocation> leftSideLocations;
+    private List<SideLocationDAO> leftSideLocations;
     @JsonProperty("rightSideLocations")
-    private List<SideLocation> rightSideLocations;
+    private List<SideLocationDAO> rightSideLocations;
 
     public RefactoringDAO(Refactoring refactoring){
         type = refactoring.getType();
-        leftSideLocations = refactoring.getLeftSideLocations();
-        rightSideLocations = refactoring.getRightSideLocations();
+        leftSideLocations = new LinkedList<>();
+        rightSideLocations = new LinkedList<>();
+        refactoring.getLeftSideLocations().forEach(p->leftSideLocations.add(new SideLocationDAO(p)));
+        refactoring.getRightSideLocations().forEach(p->rightSideLocations.add(new SideLocationDAO(p)));
     }
 }

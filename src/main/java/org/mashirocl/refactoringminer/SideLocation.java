@@ -2,10 +2,7 @@ package org.mashirocl.refactoringminer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Range;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import org.eclipse.jgit.diff.DiffEntry;
 
 import java.nio.file.Path;
@@ -19,6 +16,7 @@ import java.nio.file.Path;
 @Getter
 @Setter
 @ToString
+@NoArgsConstructor
 public class SideLocation{
     private Path path;
     private Range<Integer> range;

@@ -38,7 +38,7 @@ public class CSVWriter {
     }
 
     public static void writeCommit2Json(List<CommitDAO> commitDAOs, String outputPath){
-        log.info("Writing {} micro-changes to {}", commitDAOs.size(), outputPath);
+        log.info("Writing {} commits to {}", commitDAOs.size(), outputPath);
         ObjectMapper objectMapper = new ObjectMapper();
         try{
             Path path = Path.of(outputPath);
@@ -50,6 +50,50 @@ public class CSVWriter {
             objectMapper.writeValue(f, commitDAOs);
         } catch (IOException e){
             log.error(e.getMessage(), e);
+        }
+    }
+
+    public static void writeCommit2CSV(String inputPath, String outputPath){
+        log.info("read from {} and write to {}", inputPath, outputPath);
+        try( com.opencsv.CSVWriter csvWriter = new com.opencsv.CSVWriter(new FileWriter(outputPath))){
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<CommitDAO> commitDAOs = objectMapper.readValue(
+                    new File(inputPath),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, CommitDAO.class));
+
+            String [] header = {"Method-level CommitID", "Url","M/R", "Type","OldPosition", "NewPosition","Review" , "Note"};
+            csvWriter.writeNext(header);
+            for(CommitDAO commitDAO:commitDAOs){
+                commitDAO.getMicroChanges().forEach(p -> {
+                    String[] data = {
+                            commitDAO.getSha1(),
+                            commitDAO.getUrl(),
+                            "M",
+                            p.getType(),
+                            p.getLeftSideLocations().toString(),
+                            p.getRightSideLocations().toString(),
+                            "",
+                            ""
+                    };
+                    csvWriter.writeNext(data);
+                });
+                commitDAO.getRefactorings().forEach(p -> {
+                    String[] data = {
+                            commitDAO.getSha1(),
+                            commitDAO.getUrl(),
+                            "R",
+                            p.getType(),
+                            p.getLeftSideLocations().toString(),
+                            p.getRightSideLocations().toString(),
+                            "",
+                            ""
+                    };
+                    csvWriter.writeNext(data);
+                });
+            }
+        }
+        catch (IOException e){
+            log.error(e.getMessage(),e);
         }
     }
 
@@ -142,4 +186,10 @@ public class CSVWriter {
     public static void writeCSV(List<MicroChangeFileSpecified> microChangeFileSpecifiedList){
         microChangeFileSpecifiedList.stream().map(p -> new MicroChangeDAO(p.getType(),p.getLeftSideLocations(),p.getRightSideLocations())).toList();
     }
+
+
+    public static void main(String [] args){
+        writeCommit2CSV("/Users/leichen/project/semantic_lifter/SemanticLifter/patternMatch/miner/commitDAOs.json", "/Users/leichen/project/semantic_lifter/SemanticLifter/patternMatch/miner/commitDAOs.csv");
+    }
+
 }
