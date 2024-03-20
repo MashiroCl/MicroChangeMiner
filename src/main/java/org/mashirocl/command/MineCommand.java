@@ -90,9 +90,6 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new AddAdditionalCondition());
         patternMatcherGumTree.addMicroChange(new AddCurlyBrace());
         patternMatcherGumTree.addMicroChange(new RemoveCurlyBrace());
-
-//        TODO: Not finished should remove this (also on the remote repo)
-//        patternMatcherGumTree.addMicroChange(new ReplaceVariableWithExpression());
     }
 
     @Override
