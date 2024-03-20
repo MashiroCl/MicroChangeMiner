@@ -82,11 +82,12 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new RemoveElse());
         patternMatcherGumTree.addMicroChange(new UnifyCondition());
         patternMatcherGumTree.addMicroChange(new ExtractFromCondition());
-        patternMatcherGumTree.addMicroChange(new ParallelCondition());
+        patternMatcherGumTree.addMicroChange(new LiftCondition());
+        patternMatcherGumTree.addMicroChange(new LowerCondition());
         patternMatcherGumTree.addMicroChange(new ChangeBoundaryCondition());
         patternMatcherGumTree.addMicroChange(new RemoveConditionBlock());
         patternMatcherGumTree.addMicroChange(new InsertConditionBlock());
-        patternMatcherGumTree.addMicroChange(new IntoCondition());
+        patternMatcherGumTree.addMicroChange(new EncapsulateInCondition());
         patternMatcherGumTree.addMicroChange(new AddAdditionalCondition());
         patternMatcherGumTree.addMicroChange(new AddCurlyBrace());
         patternMatcherGumTree.addMicroChange(new RemoveCurlyBrace());
@@ -102,8 +103,8 @@ public class MineCommand implements Callable<Integer> {
         final DiffFormatter diffFormatter = new DiffFormatter(System.out);
         diffFormatter.setRepository(ra.getRepository());
 
-//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
-        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "f3298f9f205526837ec3ba1520fce38e8840fbbd");
+        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "e531f9a846917c5d93b52d0aacd608070f68a324");
         log.info("Edit Script obtained for {} commits", res.size());
 
         //TODO: fix the logic here, the commit map is necessary for refactoring
