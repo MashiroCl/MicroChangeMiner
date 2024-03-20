@@ -9,10 +9,7 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.diff.DiffFormatter;
-import org.mashirocl.dao.CommitDAO;
-import org.mashirocl.dao.MicroChangeDAO;
-import org.mashirocl.dao.MinedMicroChange;
-import org.mashirocl.dao.RefactoringDAO;
+import org.mashirocl.dao.*;
 import org.mashirocl.editscript.*;
 import org.mashirocl.match.ActionLocator;
 import org.mashirocl.match.ActionStatus;
@@ -51,10 +48,10 @@ public class MineCommand implements Callable<Integer> {
         String methodLevelGitPath;
 
         @CommandLine.Parameters(index = "1", description = "Output mining result in json file")
-        String outputPath;
+        String outputJsonPath;
 
         @Option(names = {"-c", "--csv"}, description = "Output mining result to csv")
-        String csvPath;
+        String outputCsvPath;
 
         @Option(names = {"--map"}, description = "Convert the method-level commit hash to original hash")
         String commitMap;
@@ -91,7 +88,6 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new InsertConditionBlock());
         patternMatcherGumTree.addMicroChange(new IntoCondition());
         patternMatcherGumTree.addMicroChange(new AddAdditionalCondition());
-        patternMatcherGumTree.addMicroChange(new SimplifyConditional());
         patternMatcherGumTree.addMicroChange(new AddCurlyBrace());
         patternMatcherGumTree.addMicroChange(new RemoveCurlyBrace());
 
@@ -99,7 +95,6 @@ public class MineCommand implements Callable<Integer> {
 //        patternMatcherGumTree.addMicroChange(new ReplaceVariableWithExpression());
     }
 
-    //TODO: better to output the range of micro-change & ref, prepare for the visualization
     @Override
     public Integer call() throws Exception {
         //TODO the ratio decreases! debug the refactoring, mbassador loses one covered line
@@ -134,7 +129,8 @@ public class MineCommand implements Callable<Integer> {
         loadMicroChanges(patternMatcherGumTree);
 
         List<CommitDAO> commitDAOs = new LinkedList<>();
-        List<MinedMicroChange> minedMicroChanges = new LinkedList<>();
+        List<NotCoveredDAO> notCovered = new LinkedList<>();
+//        List<MinedMicroChange> minedMicroChanges = new LinkedList<>();
         ActionLocator actionLocator = new ActionLocator();
 
         int count = 0;
@@ -203,19 +199,18 @@ public class MineCommand implements Callable<Integer> {
                         treeActionMicroChangePerFile.getDstRange().addAll(microChange.getSrcDstRange().getDstRange());
                     }
 
-                    minedMicroChanges.addAll(microChanges.stream()
-                            .map(p -> new MinedMicroChange(
-                                    repositoryName,
-                                    commitID,
-                                    diffEditScriptWithSource.getDiffEntry().getOldPath(),
-                                    diffEditScriptWithSource.getDiffEntry().getNewPath(),
-                                    p.getType(),
-                                    p.getAction(),
-                                    p.getSrcDstRange().toString())).toList());
-                    numberMicroChangeContainedConditionRelatedAction += 1;
-
+//                    minedMicroChanges.addAll(microChanges.stream()
+//                            .map(p -> new MinedMicroChange(
+//                                    repositoryName,
+//                                    commitID,
+//                                    diffEditScriptWithSource.getDiffEntry().getOldPath(),
+//                                    diffEditScriptWithSource.getDiffEntry().getNewPath(),
+//                                    p.getType(),
+//                                    p.getAction(),
+//                                    p.getSrcDstRange().toString())).toList());
                     microChangeDAOs.addAll(
                             microChanges.stream().map(p->new MicroChangeDAO(new MicroChangeFileSpecified(p,diffEditScriptWithSource.getDiffEntry()))).toList());
+                    numberMicroChangeContainedConditionRelatedAction += 1;
 
                 }
 
@@ -232,9 +227,6 @@ public class MineCommand implements Callable<Integer> {
                         srcDstLineRangeOfIf, treeActionPerFile);
                 mrADChangeCoveredLines[0]+=coveredLength(microChangeUnionRefRange.getSrcRange());
                 mrADChangeCoveredLines[1]+=coveredLength(microChangeUnionRefRange.getDstRange());
-
-
-
 
 
                 // action touched if range
@@ -296,27 +288,46 @@ public class MineCommand implements Callable<Integer> {
                     microADChangeCoveredLines[1] += coveredLength(treeActionMicroChangePerFile.getDstRange());
                 }
 
-
-                RangeSet<Integer> srcNotCovered =  notCoveredRange(treeActionPerFile.getSrcRange(), treeActionMicroChangePerFile.getSrcRange());
-                RangeSet<Integer> dstNotCovered =  notCoveredRange(treeActionPerFile.getDstRange(), treeActionMicroChangePerFile.getDstRange());
                 URL link = new URL(LinkAttacher.searchLink(repositoryName));
-                logNotCovered(srcNotCovered, dstNotCovered, commitID, commitMapper, link, diffEditScriptWithSource, methodLevelConvertor, config.methodLevelGitPath);
 
-                CommitDAO commitDAO = new CommitDAO(repositoryName,
-                        commitMapper.getMap().get(commitID),
-                        LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
-                        microChangeDAOs, refactoringDAOs);
-                log.info("commitDAO: {}", commitDAO );
+                // store mined micro changes
                 if(!microChangeDAOs.isEmpty() || !refactoringDAOs.isEmpty()) {
                     commitDAOs.add(new CommitDAO(repositoryName,
                             commitMapper.getMap().get(commitID),
                             LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
                             microChangeDAOs, refactoringDAOs));
                 }
+
+
+                // Not covered
+                RangeSet<Integer> srcNotCovered =  notCoveredRange(treeActionPerFile.getSrcRange(), treeActionMicroChangePerFile.getSrcRange());
+                RangeSet<Integer> dstNotCovered =  notCoveredRange(treeActionPerFile.getDstRange(), treeActionMicroChangePerFile.getDstRange());
+                if(!srcNotCovered.isEmpty() || !dstNotCovered.isEmpty()) {
+                    RangeSet<Integer> originalLevelSrcNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
+                            methodLevelConvertor.getParentCommit(new File(config.methodLevelGitPath), commitID),
+                            Path.of(config.methodLevelGitPath).getParent().toString(),
+                            diffEditScriptWithSource.getDiffEntry().getOldPath(), srcNotCovered);
+                    RangeSet<Integer> originalLevelDstNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
+                            commitID, Path.of(config.methodLevelGitPath).getParent().toString(),
+                            diffEditScriptWithSource.getDiffEntry().getNewPath(), dstNotCovered);
+                    // Store not covered
+                    notCovered.add(new NotCoveredDAO(repositoryName,
+                            commitID,
+                            LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
+                            diffEditScriptWithSource.getDiffEntry().getOldPath(),
+                            diffEditScriptWithSource.getDiffEntry().getNewPath(),
+                            originalLevelSrcNotCovered,
+                            originalLevelDstNotCovered));
+                    logNotCovered(srcNotCovered, dstNotCovered, commitID, commitMapper, link, diffEditScriptWithSource, methodLevelConvertor, config.methodLevelGitPath);
+                }
             }
         }
 
-        CSVWriter.writeCommit2Json(commitDAOs, "./commitDAOs.json");
+
+        CSVWriter.writeCommit2Json(commitDAOs, config.outputJsonPath);
+        CSVWriter.writeCommit2CSV(config.outputJsonPath, config.outputCsvPath);
+
+        CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
 
 
         logTreeDALines(totalADCodeChangeLines);
@@ -327,14 +338,14 @@ public class MineCommand implements Callable<Integer> {
         logRefactoringCoverageRatio(refCoveredCondition);
         logActions(numberTotalConditionRelatedActionNumber, numberMicroChangeContainedConditionRelatedAction);
 
-        log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
-        minedMicroChanges.forEach(p -> p.setCommitID(commitMapper.getMap().get((p.getCommitID()))));
+//        log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
+//        minedMicroChanges.forEach(p -> p.setCommitID(commitMapper.getMap().get((p.getCommitID()))));
 
-        CSVWriter.writeMicroChange2Json(minedMicroChanges, config.outputPath);
+//        CSVWriter.writeMicroChange2Json(minedMicroChanges, config.outputPath);
 
-        if (config.csvPath != null) {
-            CSVWriter.writeMircoChangesToCsv(config.outputPath, config.csvPath, new URL(LinkAttacher.searchLink(repositoryName)));
-        }
+//        if (config.csvPath != null) {
+//            CSVWriter.writeMircoChangesToCsv(config.outputPath, config.csvPath, new URL(LinkAttacher.searchLink(repositoryName)));
+//        }
 
 //        writeCSV(minedMicroChangesFileSpecified);
 

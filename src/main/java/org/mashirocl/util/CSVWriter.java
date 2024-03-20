@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.dao.CommitDAO;
 import org.mashirocl.dao.MicroChangeDAO;
 import org.mashirocl.dao.MinedMicroChange;
+import org.mashirocl.dao.NotCoveredDAO;
 import org.mashirocl.microchange.MicroChangeFileSpecified;
 
 import java.io.File;
@@ -94,6 +95,23 @@ public class CSVWriter {
         }
         catch (IOException e){
             log.error(e.getMessage(),e);
+        }
+    }
+
+
+    public static void writeNotCoveredToJson(List<NotCoveredDAO> notCoveredDAOs, String outputPath){
+        log.info("Writing {} not covered instances to {}", notCoveredDAOs.size(), outputPath);
+        ObjectMapper objectMapper = new ObjectMapper();
+        try{
+            Path path = Path.of(outputPath);
+            if(!Files.exists(path)) {
+                Files.createDirectories(path.getParent());
+                Files.createFile(path);
+            }
+            File f = new File(outputPath);
+            objectMapper.writeValue(f, notCoveredDAOs);
+        } catch (IOException e){
+            log.error(e.getMessage(), e);
         }
     }
 
