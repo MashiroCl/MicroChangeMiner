@@ -27,7 +27,7 @@ public class NodePosition {
     }
 
     /**
-     * if the node is in if, return the IfStatement node
+     * if the node is in if (in conditional expression/then/else), return the IfStatement node
      * @param node
      * @return
      */
