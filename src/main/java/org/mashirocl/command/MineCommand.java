@@ -102,7 +102,8 @@ public class MineCommand implements Callable<Integer> {
         final DiffFormatter diffFormatter = new DiffFormatter(System.out);
         diffFormatter.setRepository(ra.getRepository());
 
-        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "f3298f9f205526837ec3ba1520fce38e8840fbbd");
         log.info("Edit Script obtained for {} commits", res.size());
 
         //TODO: fix the logic here, the commit map is necessary for refactoring

@@ -95,15 +95,11 @@ public class EditScriptExtractor {
                     SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
                             FileSource.of(newPath, newTree, ra.getRepository()));
 
-//                    diffEditScriptList.add(DiffEditScript.of(diffEntry, getEditScript(sourcePair)));
-//                    EditScriptMapping editScriptMapping = getEditScriptMapping(sourcePair);
-
                     MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
 
                     EditScript editScript = editScriptGenerator.computeActions(mapping);
                     EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
                     editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
-//                    EditScriptStorer editScriptStorer = EditScriptStorer.of(editScript, mapping, sourcePair);
                     editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
 
                     diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
@@ -123,6 +119,63 @@ public class EditScriptExtractor {
 
     public static Map<String, List<DiffEditScriptWithSource>> getEditScript(RepositoryAccess ra, DiffFormatter diffFormatter){
         return getEditScript(ra, diffFormatter, null, "HEAD");
+    }
+
+    public static  Map<String, List<DiffEditScriptWithSource>> getEditScriptForSingleCommit(RepositoryAccess ra, DiffFormatter diffFormatter, String commitID){
+        log.info("Computing edit script...");
+        Map<String, List<DiffEditScriptWithSource>> res = new HashMap<>();
+        Iterable<RevCommit> walk = ra.walk(null, "HEAD");
+        try {
+            for (RevCommit commit : walk) {
+                if(!commit.getId().name().equals(commitID)) continue;
+                if (commit.getParents().length == 0) {
+                    continue;
+                }
+                RevTree newTree = commit.getTree();
+                RevTree oldTree = commit.getParent(0).getTree();
+                List<DiffEntry> diffEntryList = diffFormatter.scan(oldTree, newTree);
+                // skip the commits which are purely addition or deletion
+                if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
+                        || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
+                {
+                    continue;
+                }
+                List<DiffEditScriptWithSource> diffEditScripts = new LinkedList<>();
+
+                for (DiffEntry diffEntry : diffEntryList) {
+                    String oldPath = diffEntry.getOldPath();
+                    String newPath = diffEntry.getNewPath();
+                    if(!oldPath.contains(".java") &&
+                            !newPath.contains(".java") &&
+                            !oldPath.contains(".mjava") &&
+                            !newPath.contains(".mjava")){
+                        continue;
+                    }
+//                    skip the file which has only addition/ deletion
+                    if(diffEntry.getChangeType()==DiffEntry.ChangeType.ADD
+                            ||diffEntry.getChangeType()==DiffEntry.ChangeType.DELETE)
+                        continue;
+
+                    SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
+                            FileSource.of(newPath, newTree, ra.getRepository()));
+
+                    MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
+
+                    EditScript editScript = editScriptGenerator.computeActions(mapping);
+                    EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
+                    editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
+                    editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
+                    diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
+                }
+
+                res.put(commit.getId().name(), diffEditScripts);
+            }
+            return res;
+        }
+        catch (IOException e){
+            log.error(e.getMessage(), e);
+        }
+        return res;
     }
 
     public static Map<Tree, Tree> mappingStoreToMap(MappingStore mappings){
