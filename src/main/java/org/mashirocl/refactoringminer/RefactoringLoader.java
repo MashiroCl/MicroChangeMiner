@@ -98,6 +98,7 @@ public class RefactoringLoader {
                     iteratorRef.remove();
                 }
             }
+            // remove the commit if no refactorings remain
             if(curIteratorMap.getValue().isEmpty()){
                 iteratorMap.remove();
             }
@@ -106,7 +107,8 @@ public class RefactoringLoader {
 
     public static boolean isSpecialCases(Refactoring refactoring){
         // is Extract related (e.g. Extract Method, Extract Method)
-        return refactoring.getType().contains("Extract");
+        // is Rename related
+        return refactoring.getType().contains("Extract") || refactoring.getType().contains("Rename");
 
     }
 
