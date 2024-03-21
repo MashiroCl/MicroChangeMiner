@@ -151,7 +151,7 @@ public class EditScriptExtractor {
                             !newPath.contains(".mjava")){
                         continue;
                     }
-//                    skip the file which has only addition/ deletion
+                // skip the file which has only addition/ deletion
                     if(diffEntry.getChangeType()==DiffEntry.ChangeType.ADD
                             ||diffEntry.getChangeType()==DiffEntry.ChangeType.DELETE)
                         continue;
