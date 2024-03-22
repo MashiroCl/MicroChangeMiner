@@ -95,7 +95,6 @@ public class MineCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        //TODO the ratio decreases! debug the refactoring, mbassador loses one covered line
         log.info("start mining...");
         final RepositoryAccess ra = new RepositoryAccess(Path.of(config.methodLevelGitPath));
         final String repositoryName = Path.of(config.methodLevelGitPath).getParent().getFileName().toString();
@@ -104,7 +103,7 @@ public class MineCommand implements Callable<Integer> {
         diffFormatter.setRepository(ra.getRepository());
 
         Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
-//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "e531f9a846917c5d93b52d0aacd608070f68a324");
+//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "7d24397ccc1ecce386020002526bed2c4e4766a6");
         log.info("Edit Script obtained for {} commits", res.size());
 
         //TODO: fix the logic here, the commit map is necessary for refactoring
@@ -121,7 +120,6 @@ public class MineCommand implements Callable<Integer> {
         // exclude refactorings that across more than 3 lines (Extract related refs are excluded)
         RefactoringLoader.excludeRefactoringsAccordingToLineRanges(refMap, refThreshold);
         log.info("Excluded refactorings across more than {}", refThreshold);
-
 
         PatternMatcher patternMatcherGumTree = new PatternMatcherGumTree();
         // load micro change types
@@ -152,7 +150,7 @@ public class MineCommand implements Callable<Integer> {
             log.info("Mining {}/{} {}...", count, total_count, commitID);
 
             List<Refactoring> refactoringList = refMap.getOrDefault(commitID, new LinkedList<>());
-
+//            log.info("refactoringList {}", refactoringList);
             for (DiffEditScriptWithSource diffEditScriptWithSource : res.get(commitID)) {
                 log.info("DiffEditScriptWithSource {}", diffEditScriptWithSource);
                 EditScript editScript = diffEditScriptWithSource.getEditScript();
@@ -198,32 +196,46 @@ public class MineCommand implements Callable<Integer> {
                         treeActionMicroChangePerFile.getDstRange().addAll(microChange.getSrcDstRange().getDstRange());
                     }
 
-//                    minedMicroChanges.addAll(microChanges.stream()
-//                            .map(p -> new MinedMicroChange(
-//                                    repositoryName,
-//                                    commitID,
-//                                    diffEditScriptWithSource.getDiffEntry().getOldPath(),
-//                                    diffEditScriptWithSource.getDiffEntry().getNewPath(),
-//                                    p.getType(),
-//                                    p.getAction(),
-//                                    p.getSrcDstRange().toString())).toList());
-                    microChangeDAOs.addAll(
-                            microChanges.stream().map(p->new MicroChangeDAO(new MicroChangeFileSpecified(p,diffEditScriptWithSource.getDiffEntry()))).toList());
+
+                    //TODO test
+                    for(MicroChange microChange:microChanges){
+                        MicroChangeFileSpecified temp = new MicroChangeFileSpecified(microChange, diffEditScriptWithSource.getDiffEntry());
+                        methodLevelConvertor.covertMethodLevelMicroChangeToFileLevel(commitID,config.methodLevelGitPath,temp);
+                        microChangeDAOs.add(new MicroChangeDAO(temp));
+                    }
+
+//                    microChangeDAOs.addAll(
+//                            microChanges.stream()
+//                                    .map(p->new MicroChangeDAO(
+//                                            new MicroChangeFileSpecified(p,diffEditScriptWithSource.getDiffEntry()))
+//                                    ).toList());
                     numberMicroChangeContainedConditionRelatedAction += 1;
 
                 }
 
                 List<Refactoring> inConditionRefactoring = getInConditionRefactoring(diffEditScriptWithSource, refactoringList, srcDstLineRangeOfIf);
+                // intersect with action
+//                List<Refactoring> inConditionIntersectActionRefactoring = getRefactoringIntersectWithRange(refactoringList,treeActionPerFile);
+
+//                log.info("inCondtionRefactoring {}", inConditionRefactoring);
                 // include the refactoring covered lines
                 SrcDstRange inConditionRefRange = extractRefactoringRange(inConditionRefactoring);
-
-                refactoringDAOs.addAll(inConditionRefactoring.stream().map(RefactoringDAO::new).toList());
+//                log.info("inConditionRefRange {}", inConditionRefRange);
+                // store & convert to file level
+                for(Refactoring r:inConditionRefactoring){
+                    // not to change the original method-level refactoring
+                    Refactoring temp = new Refactoring(r.getType(),r.getLeftSideLocations(),r.getRightSideLocations());
+                    methodLevelConvertor.covertMethodLevelRefactoringToFileLevel(commitID, config.methodLevelGitPath, temp);
+                    refactoringDAOs.add(new RefactoringDAO(temp));
+                }
+//                refactoringDAOs.addAll(inConditionRefactoring.stream().map(RefactoringDAO::new).toList());
 
 
                 // (micro-change U ref) ∩ tree-diff ∩ textual-if-location
                 SrcDstRange microChangeUnionRefRange = calculateMicroChangeUnionRefRange(inConditionRefRange,
                         treeActionMicroChangePerFile,
                         srcDstLineRangeOfIf, treeActionPerFile);
+                log.info("microChangeUnionRefRange {}", microChangeUnionRefRange);
                 mrADChangeCoveredLines[0]+=coveredLength(microChangeUnionRefRange.getSrcRange());
                 mrADChangeCoveredLines[1]+=coveredLength(microChangeUnionRefRange.getDstRange());
 
@@ -244,7 +256,7 @@ public class MineCommand implements Callable<Integer> {
                 if(!treeActionPerFile.getSrcRange().isEmpty()){
                     //intersection of text range and tree range
                     treeActionPerFile.getSrcRange().removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
-                    log.info("text range src: {}", srcDstLineRangeOfIf.getSrcRange());
+                    log.info("text if range src: {}", srcDstLineRangeOfIf.getSrcRange());
                     log.info("tree diff: lines deleted {}", treeActionPerFile.getSrcRange());
                     totalADCodeChangeLines[0] += coveredLength(treeActionPerFile.getSrcRange());
                 }
@@ -253,19 +265,11 @@ public class MineCommand implements Callable<Integer> {
                 if (!treeActionPerFile.getDstRange().isEmpty()) {
                     //intersection of text range and tree range
                     treeActionPerFile.getDstRange().removeAll(srcDstLineRangeOfIf.getDstRange().complement());
-                    log.info("text range dst: {}", srcDstLineRangeOfIf.getDstRange());
+                    log.info("text if range dst: {}", srcDstLineRangeOfIf.getDstRange());
                     log.info("tree diff: lines added {}", treeActionPerFile.getDstRange());
                     totalADCodeChangeLines[1] += coveredLength(treeActionPerFile.getDstRange());
                 }
 
-
-//                if (refactoringList != null) {
-//                    // ref covered intersect action covered (discuss all the code changes under the context of being covered GumTree action)
-//                    inConditionRefRange.getSrcRange().removeAll(treeActionPerFile.getSrcRange().complement());
-//                    inConditionRefRange.getDstRange().removeAll(treeActionPerFile.getDstRange().complement());
-//                    refCoveredLines[0] += coveredLength(inConditionRefRange.getSrcRange());
-//                    refCoveredLines[1] += coveredLength(inConditionRefRange.getDstRange());
-//                }
 
                 if(!treeActionMicroChangePerFile.getSrcRange().isEmpty()){
                     //intersection of text range and tree range
@@ -287,6 +291,13 @@ public class MineCommand implements Callable<Integer> {
                     microADChangeCoveredLines[1] += coveredLength(treeActionMicroChangePerFile.getDstRange());
                 }
 
+                if(!microChangeUnionRefRange.getSrcRange().isEmpty()){
+                    log.info("micro-change U refactoring covered deleted lines {}", microChangeUnionRefRange.getSrcRange());
+                }
+                if(!microChangeUnionRefRange.getDstRange().isEmpty()){
+                    log.info("micro-change U refactoring covered added lines {}", microChangeUnionRefRange.getDstRange());
+                }
+
                 URL link = new URL(LinkAttacher.searchLink(repositoryName));
 
                 // store mined micro changes
@@ -294,13 +305,14 @@ public class MineCommand implements Callable<Integer> {
                     commitDAOs.add(new CommitDAO(repositoryName,
                             commitMapper.getMap().get(commitID),
                             LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
-                            microChangeDAOs, refactoringDAOs));
+                            microChangeDAOs,
+                            refactoringDAOs));
                 }
 
 
                 // Not covered
-                RangeSet<Integer> srcNotCovered =  notCoveredRange(treeActionPerFile.getSrcRange(), treeActionMicroChangePerFile.getSrcRange());
-                RangeSet<Integer> dstNotCovered =  notCoveredRange(treeActionPerFile.getDstRange(), treeActionMicroChangePerFile.getDstRange());
+                RangeSet<Integer> srcNotCovered =  notCoveredRange(treeActionPerFile.getSrcRange(), microChangeUnionRefRange.getSrcRange());
+                RangeSet<Integer> dstNotCovered =  notCoveredRange(treeActionPerFile.getDstRange(), microChangeUnionRefRange.getDstRange());
                 if(!srcNotCovered.isEmpty() || !dstNotCovered.isEmpty()) {
                     RangeSet<Integer> originalLevelSrcNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
                             methodLevelConvertor.getParentCommit(new File(config.methodLevelGitPath), commitID),
@@ -323,8 +335,12 @@ public class MineCommand implements Callable<Integer> {
         }
 
 
+
+        // TODO: convert the method-level line index to file-level for review
         CSVWriter.writeCommit2Json(commitDAOs, config.outputJsonPath);
         CSVWriter.writeCommit2CSV(config.outputJsonPath, config.outputCsvPath);
+
+
 
         CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
 
@@ -460,6 +476,13 @@ public class MineCommand implements Callable<Integer> {
         }
         return inConditionRefactoring;
     }
+
+
+//    public static List<Refactoring> getRefactoringIntersectWithRange(List<Refactoring> refactoringList, SrcDstRange range){
+//        // left side
+//
+//        // right side
+//    }
 
 
     public static SrcDstRange extractRefactoringRange(List<Refactoring> refactoringList){
