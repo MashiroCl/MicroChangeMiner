@@ -18,7 +18,6 @@ import java.util.List;
  */
 
 
-@AllArgsConstructor
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,6 +27,12 @@ public class MicroChangeFileSpecified extends MicroChange{
 
     public MicroChangeFileSpecified(MicroChange microChange, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations){
         super(microChange.getType(), microChange.getAction());
+        this.leftSideLocations = leftSideLocations;
+        this.rightSideLocations = rightSideLocations;
+    }
+
+    public MicroChangeFileSpecified(String type, String action, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations){
+        super(type, action);
         this.leftSideLocations = leftSideLocations;
         this.rightSideLocations = rightSideLocations;
     }
@@ -43,6 +48,10 @@ public class MicroChangeFileSpecified extends MicroChange{
         if(!microChange.getSrcDstRange().getDstRange().isEmpty()){
             this.rightSideLocations.add(new SideLocation(diffEntry.getNewPath(), microChange.getSrcDstRange().getDstRange().asRanges().iterator().next()));
         }
+    }
+
+    public String toString(){
+        return "type: "+ getType() + "\naction: "+getAction() + "\nleftSideLocations: "+getLeftSideLocations()+"\nrightSideLocations: "+getRightSideLocations();
     }
 
 }
