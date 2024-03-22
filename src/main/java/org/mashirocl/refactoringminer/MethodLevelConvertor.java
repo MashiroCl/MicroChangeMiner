@@ -7,6 +7,7 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.mashirocl.microchange.MicroChangeFileSpecified;
 import org.mashirocl.util.CommitMapper;
 
 import java.io.BufferedReader;
@@ -200,6 +201,7 @@ public class MethodLevelConvertor {
     }
 
 
+
     public RangeSet covertMethodLevelRangeToFileLevel(String methodLevelCommit, String methodLevelRepoPath, String methodLevelfilePath, RangeSet<Integer> rangeSet){
         Map<String, Range> map =  getMethodLevelMappingFile(new File(methodLevelRepoPath),
                                     new File(convertMethodLevelFileToMapFile(methodLevelfilePath)),
@@ -213,6 +215,74 @@ public class MethodLevelConvertor {
             }
         }
         return res;
+    }
+
+
+    public void covertMethodLevelMicroChangeToFileLevel(String methodLevelCommit, String methodLevelGitPath, MicroChangeFileSpecified microChangeFileSpecified){
+        String methodLevelRepoPath = Path.of(methodLevelGitPath).getParent().toString();
+
+        // left side
+        for(SideLocation sideLocation: microChangeFileSpecified.getLeftSideLocations()){
+            Path methodLevelfilePath = sideLocation.getPath();
+            String methodLevelFileName = "\""+methodLevelfilePath.getFileName().toString()+"\"";
+            Map<String, Range> parentCommitmap =  getMethodLevelMappingFile(
+                    new File(methodLevelRepoPath),
+                    new File(convertMethodLevelFileToMapFile(methodLevelfilePath.toString())),
+                    getParentCommit(new File(methodLevelGitPath), methodLevelCommit));
+            if(parentCommitmap.isEmpty()){
+                log.error("Failed to find the mapping file using command: git show {}:{}", getParentCommit(new File(methodLevelGitPath), methodLevelCommit), convertMethodLevelFileToMapFile(methodLevelfilePath.toString()));
+            }else{
+                sideLocation.setRange(convertMethodLevelLineNumberToFileLevel(sideLocation.getRange(), parentCommitmap.get(methodLevelFileName)));
+            }
+        }
+
+        // right side
+        for(SideLocation sideLocation: microChangeFileSpecified.getRightSideLocations()){
+            Path methodLevelfilePath = sideLocation.getPath();
+            String methodLevelFileName = "\""+methodLevelfilePath.getFileName().toString()+"\"";
+            Map<String, Range> commitmap =  getMethodLevelMappingFile(
+                    new File(methodLevelRepoPath),
+                    new File(convertMethodLevelFileToMapFile(methodLevelfilePath.toString())),
+                    methodLevelCommit);
+            if(commitmap.isEmpty()){
+                log.error("Failed to find the mapping file using command: git show {}:{}", methodLevelCommit, convertMethodLevelFileToMapFile(methodLevelfilePath.toString()));
+            }else{
+                sideLocation.setRange(convertMethodLevelLineNumberToFileLevel(sideLocation.getRange(), commitmap.get(methodLevelFileName)));
+            }
+        }
+    }
+
+    public void covertMethodLevelRefactoringToFileLevel(String methodLevelCommit, String methodLevelGitPath, Refactoring refactoring){
+        String methodLevelRepoPath = Path.of(methodLevelGitPath).getParent().toString();
+        // left side
+        for(SideLocation sideLocation: refactoring.getLeftSideLocations()){
+            Path methodLevelfilePath = sideLocation.getPath();
+            String methodLevelFileName = "\""+methodLevelfilePath.getFileName().toString()+"\"";
+            Map<String, Range> parentCommitmap =  getMethodLevelMappingFile(
+                    new File(methodLevelRepoPath),
+                    new File(convertMethodLevelFileToMapFile(methodLevelfilePath.toString())),
+                    getParentCommit(new File(methodLevelGitPath), methodLevelCommit));
+            if(parentCommitmap.isEmpty()){
+                log.error("Failed to find the mapping file using command: git show {}:{}", getParentCommit(new File(methodLevelGitPath), methodLevelCommit), convertMethodLevelFileToMapFile(methodLevelfilePath.toString()));
+            }else{
+                sideLocation.setRange(convertMethodLevelLineNumberToFileLevel(sideLocation.getRange(), parentCommitmap.get(methodLevelFileName)));
+            }
+        }
+
+        // right side
+        for(SideLocation sideLocation: refactoring.getRightSideLocations()){
+            Path methodLevelfilePath = sideLocation.getPath();
+            String methodLevelFileName = "\""+methodLevelfilePath.getFileName().toString()+"\"";
+            Map<String, Range> commitmap =  getMethodLevelMappingFile(
+                    new File(methodLevelRepoPath),
+                    new File(convertMethodLevelFileToMapFile(methodLevelfilePath.toString())),
+                    methodLevelCommit);
+            if(commitmap.isEmpty()){
+                log.error("Failed to find the mapping file using command: git show {}:{}", methodLevelCommit, convertMethodLevelFileToMapFile(methodLevelfilePath.toString()));
+            }else{
+                sideLocation.setRange(convertMethodLevelLineNumberToFileLevel(sideLocation.getRange(), commitmap.get(methodLevelFileName)));
+            }
+        }
     }
 
     /**
