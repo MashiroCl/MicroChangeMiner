@@ -84,4 +84,14 @@ public class ActionStatus {
 
     }
 
+
+    public static SrcDstRange getIntersection(SrcDstRange a, SrcDstRange b){
+        SrcDstRange res = new SrcDstRange();
+        a.getSrcRange().removeAll(b.getSrcRange().complement());
+        a.getDstRange().removeAll(b.getDstRange().complement());
+        res.setSrcRange(a.getSrcRange());
+        res.setDstRange(a.getDstRange());
+        return res;
+    }
+
 }

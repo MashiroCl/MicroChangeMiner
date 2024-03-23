@@ -71,26 +71,27 @@ public class MineCommand implements Callable<Integer> {
 
 
     public static void loadMicroChanges(PatternMatcher patternMatcherGumTree) {
-        patternMatcherGumTree.addMicroChange(new ReverseThenElse());
-        patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
-        patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
-//        patternMatcherGumTree.addMicroChange(new SemanticallySameConditionUpdate());
-        patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
-        patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
-        patternMatcherGumTree.addMicroChange(new ReverseConditional());
-        patternMatcherGumTree.addMicroChange(new ConditionalToTernaryOperator());
-        patternMatcherGumTree.addMicroChange(new RemoveElse());
-        patternMatcherGumTree.addMicroChange(new UnifyCondition());
-        patternMatcherGumTree.addMicroChange(new ExtractFromCondition());
-        patternMatcherGumTree.addMicroChange(new LiftCondition());
-        patternMatcherGumTree.addMicroChange(new LowerCondition());
-        patternMatcherGumTree.addMicroChange(new ChangeBoundaryCondition());
-        patternMatcherGumTree.addMicroChange(new RemoveConditionBlock());
-        patternMatcherGumTree.addMicroChange(new InsertConditionBlock());
-        patternMatcherGumTree.addMicroChange(new EncapsulateInCondition());
         patternMatcherGumTree.addMicroChange(new AddAdditionalCondition());
         patternMatcherGumTree.addMicroChange(new AddCurlyBrace());
+        patternMatcherGumTree.addMicroChange(new ChangeBoundaryCondition());
+        patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
+        patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
+        patternMatcherGumTree.addMicroChange(new ConditionalToTernaryOperator());
+        patternMatcherGumTree.addMicroChange(new EncapsulateInCondition());
+        patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
+        patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
+        patternMatcherGumTree.addMicroChange(new ExtractFromCondition());
+        patternMatcherGumTree.addMicroChange(new InsertConditionBlock());
+        patternMatcherGumTree.addMicroChange(new LiftCondition());
+        patternMatcherGumTree.addMicroChange(new LowerCondition());
+        patternMatcherGumTree.addMicroChange(new RemoveConditionBlock());
         patternMatcherGumTree.addMicroChange(new RemoveCurlyBrace());
+        patternMatcherGumTree.addMicroChange(new RemoveElse());
+        patternMatcherGumTree.addMicroChange(new ReverseThenElse());
+        patternMatcherGumTree.addMicroChange(new ReverseConditional());
+        patternMatcherGumTree.addMicroChange(new SimplifyConditional());
+//        patternMatcherGumTree.addMicroChange(new UnifyCondition());
+
     }
 
     @Override
@@ -102,11 +103,10 @@ public class MineCommand implements Callable<Integer> {
         final DiffFormatter diffFormatter = new DiffFormatter(System.out);
         diffFormatter.setRepository(ra.getRepository());
 
-        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
-//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "7d24397ccc1ecce386020002526bed2c4e4766a6");
+//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "8586dd92d305f490ccb452bf516639f23cf4fedf");
         log.info("Edit Script obtained for {} commits", res.size());
 
-        //TODO: fix the logic here, the commit map is necessary for refactoring
         if (config.commitMap == null) {
             log.error("lack of commit map");
         }
@@ -136,7 +136,6 @@ public class MineCommand implements Callable<Integer> {
         int[] totalADCodeChangeLines = new int[]{0, 0};
         int[] microADChangeCoveredLines = new int[]{0, 0};
         int[] textDiffLines = new int[]{0, 0};
-//        int[] refCoveredLines = new int[]{0, 0};
         int [] refCoveredCondition = new int[]{0, 0};
         int [] mrADChangeCoveredLines = new int[]{0,0};
 
@@ -158,6 +157,8 @@ public class MineCommand implements Callable<Integer> {
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(editScriptStorer.getMappingStore());
                 Map<Tree, List<Action>> nodeActions = ActionRetriever.retrieveMap(editScript);
 
+                //load textual if
+                // TODO change to textual diff
                 SrcDstRange srcDstLineRangeOfIf = new SrcDstRange();
                 if (editScriptStorer instanceof EditScriptStorerIncludeIf) {
                     srcDstLineRangeOfIf = ((EditScriptStorerIncludeIf) editScriptStorer).getSrcDstLineRangeOfIf();
@@ -171,6 +172,7 @@ public class MineCommand implements Callable<Integer> {
 
                 SrcDstRange treeActionPerFile = new SrcDstRange();
                 SrcDstRange treeActionMicroChangePerFile = new SrcDstRange();
+                List<MicroChange> microChangesPerFile = new LinkedList<>();
 
                 log.info("# of actions {}", editScript.size());
                 for (Action a : editScript) {
@@ -180,64 +182,106 @@ public class MineCommand implements Callable<Integer> {
                     //action location
                     SrcDstRange treeActionRanges = actionLocator.getLineRanges(a, mappings, editScriptStorer);
 
-                    if (!ActionStatus.hasIntersection(treeActionRanges, srcDstLineRangeOfIf)) {
-                        continue;
+                    if (!microChanges.isEmpty()) {
+                        microChangesPerFile.addAll(microChanges);
+                        log.info("microChangesPerFile {}", microChangesPerFile);
+                        numberMicroChangeContainedConditionRelatedAction += 1;
                     }
-                    numberTotalConditionRelatedActionNumber += 1;
 
-                    treeActionPerFile.getSrcRange().addAll(treeActionRanges.getSrcRange());
-                    treeActionPerFile.getDstRange().addAll(treeActionRanges.getDstRange());
-
-                    if (microChanges.isEmpty()) continue;
-
-                    //micro-change covered range
-                    for (MicroChange microChange : microChanges) {
-                        treeActionMicroChangePerFile.getSrcRange().addAll(microChange.getSrcDstRange().getSrcRange());
-                        treeActionMicroChangePerFile.getDstRange().addAll(microChange.getSrcDstRange().getDstRange());
+                    if (ActionStatus.hasIntersection(treeActionRanges, srcDstLineRangeOfIf)) {
+                        numberTotalConditionRelatedActionNumber += 1;
+                        treeActionPerFile.getSrcRange().addAll(treeActionRanges.getSrcRange());
+                        treeActionPerFile.getDstRange().addAll(treeActionRanges.getDstRange());
                     }
 
 
-                    //TODO test
-                    for(MicroChange microChange:microChanges){
-                        MicroChangeFileSpecified temp = new MicroChangeFileSpecified(microChange, diffEditScriptWithSource.getDiffEntry());
-                        methodLevelConvertor.covertMethodLevelMicroChangeToFileLevel(commitID,config.methodLevelGitPath,temp);
-                        microChangeDAOs.add(new MicroChangeDAO(temp));
-                    }
 
-//                    microChangeDAOs.addAll(
-//                            microChanges.stream()
-//                                    .map(p->new MicroChangeDAO(
-//                                            new MicroChangeFileSpecified(p,diffEditScriptWithSource.getDiffEntry()))
-//                                    ).toList());
-                    numberMicroChangeContainedConditionRelatedAction += 1;
+//                    if (microChanges.isEmpty()) continue;
+//
+//                    microChangesPerFile.addAll(microChanges);
+//                    log.info("microChangesPerFile {}", microChangesPerFile);
+//                    numberMicroChangeContainedConditionRelatedAction += 1;
 
                 }
 
-                List<Refactoring> inConditionRefactoring = getInConditionRefactoring(diffEditScriptWithSource, refactoringList, srcDstLineRangeOfIf);
-                // intersect with action
-//                List<Refactoring> inConditionIntersectActionRefactoring = getRefactoringIntersectWithRange(refactoringList,treeActionPerFile);
+                //TODO test
+                // 1. micro-change ∩ tree-diff ∩ textual-if-location
+                // 2. convert the method-level micro-changes in the same file to file level
 
-//                log.info("inCondtionRefactoring {}", inConditionRefactoring);
-                // include the refactoring covered lines
-                SrcDstRange inConditionRefRange = extractRefactoringRange(inConditionRefactoring);
-//                log.info("inConditionRefRange {}", inConditionRefRange);
-                // store & convert to file level
-                for(Refactoring r:inConditionRefactoring){
-                    // not to change the original method-level refactoring
-                    Refactoring temp = new Refactoring(r.getType(),r.getLeftSideLocations(),r.getRightSideLocations());
-                    methodLevelConvertor.covertMethodLevelRefactoringToFileLevel(commitID, config.methodLevelGitPath, temp);
-                    refactoringDAOs.add(new RefactoringDAO(temp));
-                }
-//                refactoringDAOs.addAll(inConditionRefactoring.stream().map(RefactoringDAO::new).toList());
+                // micro-change ∩ tree-diff ∩ textual-if-location
+                log.info("microChange before exclude: {}", microChangesPerFile);
+                List<MicroChangeFileSpecified> microChangeFileSpecifiedListPerFile = new LinkedList<>();
+                microChangesPerFile.stream().forEach(p->microChangeFileSpecifiedListPerFile.add(new MicroChangeFileSpecified(p,diffEditScriptWithSource.getDiffEntry())));
+                List<MicroChangeFileSpecified> inConditionMicroChange = microChangeIntersectWithRange(microChangeFileSpecifiedListPerFile, treeActionPerFile);
+                log.info("inConditionMicroChange: {}", inConditionMicroChange);
+                List<MicroChangeFileSpecified> treeDiffInConditionMicroChange = microChangeIntersectWithRange(inConditionMicroChange, srcDstLineRangeOfIf);
+                log.info("treeDiffInConditionMicroChange: {}", treeDiffInConditionMicroChange);
 
+                //TODO test
+                // 1. refactoring ∩ tree-diff ∩ textual-if-location
+                // 2. convert the method-level refactoring in the same file to file level
+
+                // refactoring ∩ tree-diff ∩ textual-if-location
+                List<Refactoring> inConditionRefactoring = refactoringIntersectWithRange(diffEditScriptWithSource, refactoringList, treeActionPerFile);
+                List<Refactoring> treeDiffInConditonRefactoring = refactoringIntersectWithRange(diffEditScriptWithSource, inConditionRefactoring, srcDstLineRangeOfIf);
 
                 // (micro-change U ref) ∩ tree-diff ∩ textual-if-location
-                SrcDstRange microChangeUnionRefRange = calculateMicroChangeUnionRefRange(inConditionRefRange,
-                        treeActionMicroChangePerFile,
-                        srcDstLineRangeOfIf, treeActionPerFile);
+                SrcDstRange microChangeUnionRefRange = calculateMicroChangeUnionRefRange(treeDiffInConditionMicroChange, treeDiffInConditonRefactoring, diffEditScriptWithSource);
+
                 log.info("microChangeUnionRefRange {}", microChangeUnionRefRange);
                 mrADChangeCoveredLines[0]+=coveredLength(microChangeUnionRefRange.getSrcRange());
                 mrADChangeCoveredLines[1]+=coveredLength(microChangeUnionRefRange.getDstRange());
+
+                // Not covered
+                // TODO debug here
+                URL link = new URL(LinkAttacher.searchLink(repositoryName));
+                SrcDstRange shouldCoveredRange = ActionStatus.getIntersection(treeActionPerFile, srcDstLineRangeOfIf);
+                RangeSet<Integer> srcNotCovered = notCoveredRange(shouldCoveredRange.getSrcRange(), microChangeUnionRefRange.getSrcRange());
+                RangeSet<Integer> dstNotCovered =  notCoveredRange(shouldCoveredRange.getDstRange(), microChangeUnionRefRange.getDstRange());
+                if(!srcNotCovered.isEmpty() || !dstNotCovered.isEmpty()) {
+                    RangeSet<Integer> originalLevelSrcNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
+                            methodLevelConvertor.getParentCommit(new File(config.methodLevelGitPath), commitID),
+                            Path.of(config.methodLevelGitPath).getParent().toString(),
+                            diffEditScriptWithSource.getDiffEntry().getOldPath(), srcNotCovered);
+                    RangeSet<Integer> originalLevelDstNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
+                            commitID, Path.of(config.methodLevelGitPath).getParent().toString(),
+                            diffEditScriptWithSource.getDiffEntry().getNewPath(), dstNotCovered);
+
+                    // Store not covered
+                    notCovered.add(new NotCoveredDAO(repositoryName,
+                            commitID,
+                            LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
+                            diffEditScriptWithSource.getDiffEntry().getOldPath(),
+                            diffEditScriptWithSource.getDiffEntry().getNewPath(),
+                            originalLevelSrcNotCovered,
+                            originalLevelDstNotCovered));
+                    logNotCovered(srcNotCovered, dstNotCovered, commitID, commitMapper, link, diffEditScriptWithSource, methodLevelConvertor, config.methodLevelGitPath);
+                }
+
+
+                // convert the method-level micro-changes in the same file to file level & store
+                for(MicroChangeFileSpecified microChange:treeDiffInConditionMicroChange){
+                    methodLevelConvertor.covertMethodLevelMicroChangeToFileLevel(commitID,config.methodLevelGitPath,microChange);
+                    microChangeDAOs.add(new MicroChangeDAO(microChange));
+                }
+
+
+                // convert the method-level refactoring in the same file to file level & store
+                for(Refactoring r:treeDiffInConditonRefactoring){
+                    methodLevelConvertor.covertMethodLevelRefactoringToFileLevel(commitID, config.methodLevelGitPath, r);
+                    refactoringDAOs.add(new RefactoringDAO(r));
+                }
+
+                // include the refactoring covered lines
+                SrcDstRange inConditionRefRange = extractRefactoringRange(treeDiffInConditonRefactoring);
+
+
+                // (micro-change U ref) ∩ tree-diff ∩ textual-if-location
+//                SrcDstRange microChangeUnionRefRange = calculateMicroChangeUnionRefRange(inConditionRefRange,
+//                        treeActionMicroChangePerFile,
+//                        srcDstLineRangeOfIf, treeActionPerFile);
+
+
 
 
                 // action touched if range
@@ -291,14 +335,13 @@ public class MineCommand implements Callable<Integer> {
                     microADChangeCoveredLines[1] += coveredLength(treeActionMicroChangePerFile.getDstRange());
                 }
 
-                if(!microChangeUnionRefRange.getSrcRange().isEmpty()){
-                    log.info("micro-change U refactoring covered deleted lines {}", microChangeUnionRefRange.getSrcRange());
-                }
-                if(!microChangeUnionRefRange.getDstRange().isEmpty()){
-                    log.info("micro-change U refactoring covered added lines {}", microChangeUnionRefRange.getDstRange());
-                }
+//                if(!microChangeUnionRefRange.getSrcRange().isEmpty()){
+//                    log.info("micro-change U refactoring covered deleted lines {}", microChangeUnionRefRange.getSrcRange());
+//                }
+//                if(!microChangeUnionRefRange.getDstRange().isEmpty()){
+//                    log.info("micro-change U refactoring covered added lines {}", microChangeUnionRefRange.getDstRange());
+//                }
 
-                URL link = new URL(LinkAttacher.searchLink(repositoryName));
 
                 // store mined micro changes
                 if(!microChangeDAOs.isEmpty() || !refactoringDAOs.isEmpty()) {
@@ -310,27 +353,6 @@ public class MineCommand implements Callable<Integer> {
                 }
 
 
-                // Not covered
-                RangeSet<Integer> srcNotCovered =  notCoveredRange(treeActionPerFile.getSrcRange(), microChangeUnionRefRange.getSrcRange());
-                RangeSet<Integer> dstNotCovered =  notCoveredRange(treeActionPerFile.getDstRange(), microChangeUnionRefRange.getDstRange());
-                if(!srcNotCovered.isEmpty() || !dstNotCovered.isEmpty()) {
-                    RangeSet<Integer> originalLevelSrcNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
-                            methodLevelConvertor.getParentCommit(new File(config.methodLevelGitPath), commitID),
-                            Path.of(config.methodLevelGitPath).getParent().toString(),
-                            diffEditScriptWithSource.getDiffEntry().getOldPath(), srcNotCovered);
-                    RangeSet<Integer> originalLevelDstNotCovered = methodLevelConvertor.covertMethodLevelRangeToFileLevel(
-                            commitID, Path.of(config.methodLevelGitPath).getParent().toString(),
-                            diffEditScriptWithSource.getDiffEntry().getNewPath(), dstNotCovered);
-                    // Store not covered
-                    notCovered.add(new NotCoveredDAO(repositoryName,
-                            commitID,
-                            LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
-                            diffEditScriptWithSource.getDiffEntry().getOldPath(),
-                            diffEditScriptWithSource.getDiffEntry().getNewPath(),
-                            originalLevelSrcNotCovered,
-                            originalLevelDstNotCovered));
-                    logNotCovered(srcNotCovered, dstNotCovered, commitID, commitMapper, link, diffEditScriptWithSource, methodLevelConvertor, config.methodLevelGitPath);
-                }
             }
         }
 
@@ -410,6 +432,93 @@ public class MineCommand implements Callable<Integer> {
     }
 
 
+    public static SrcDstRange getRefactoringRangeInFile(List<Refactoring> refactorings, String oldPath, String newPath){
+        SrcDstRange refactoringRange = new SrcDstRange();
+        for(Refactoring ref: refactorings){
+            // refactoring left side
+            for(SideLocation sideLocation: ref.getLeftSideLocations()){
+                if(!sideLocation.getPath().toString().equals(oldPath)){
+                    continue;
+                }
+                refactoringRange.getSrcRange().add(sideLocation.getRange());
+            }
+            // refactoring right side
+            for(SideLocation sideLocation: ref.getRightSideLocations()){
+                if(!sideLocation.getPath().toString().equals(newPath)){
+                    continue;
+                }
+                refactoringRange.getDstRange().add(sideLocation.getRange());
+            }
+        }
+        //TODO remove
+        log.info("get refactoring Range: {}", refactoringRange);
+        return  refactoringRange;
+    }
+
+    public static SrcDstRange getMicroChangeRangeInFile(List<MicroChangeFileSpecified> microChanges, String oldPath, String newPath){
+        SrcDstRange microChangeRange = new SrcDstRange();
+
+        log.info("oldPath: {}", oldPath);
+        log.info("newPath: {}", newPath);
+        log.info("microChange: {}", microChanges);
+        for(MicroChangeFileSpecified microChange: microChanges){
+            // refactoring left side
+            for(SideLocation sideLocation: microChange.getLeftSideLocations()){
+                log.info("sideLocations: {}", sideLocation);
+                if(!sideLocation.getPath().toString().equals(oldPath)){
+                    continue;
+                }
+                microChangeRange.getSrcRange().add(sideLocation.getRange());
+            }
+            // refactoring right side
+            for(SideLocation sideLocation: microChange.getRightSideLocations()){
+                if(!sideLocation.getPath().toString().equals(newPath)){
+                    continue;
+                }
+                microChangeRange.getDstRange().add(sideLocation.getRange());
+            }
+        }
+        log.info("get microchange Range: {}", microChangeRange);
+        return  microChangeRange;
+    }
+
+    public static SrcDstRange calculateMicroChangeUnionRefRange(List<MicroChangeFileSpecified> microChanges,
+                                                                List<Refactoring> refactorings,
+                                                                DiffEditScriptWithSource diffEditScriptWithSource){
+        // micro-change U ref
+        SrcDstRange res = new SrcDstRange();
+        // micro change range
+        SrcDstRange microChangeRange = getMicroChangeRangeInFile(
+                microChanges,
+                diffEditScriptWithSource.getDiffEntry().getOldPath(),
+                diffEditScriptWithSource.getDiffEntry().getNewPath()
+        );
+
+        //TODO remove
+        log.info("microChange Range {}", microChangeRange);
+
+        SrcDstRange refactoringRange = getRefactoringRangeInFile(
+                refactorings,
+                diffEditScriptWithSource.getDiffEntry().getOldPath(),
+                diffEditScriptWithSource.getDiffEntry().getNewPath()
+        );
+
+        //TODO remove
+        log.info("refactoring Range {}", refactoringRange);
+
+
+        // union
+        res.setSrcRange(TreeRangeSet.create(refactoringRange.getSrcRange()));
+        res.setDstRange(TreeRangeSet.create(refactoringRange.getDstRange()));
+        res.getSrcRange().addAll(microChangeRange.getSrcRange());
+        res.getDstRange().addAll(microChangeRange.getDstRange());
+
+        //TODO remove
+        log.info("union Range {}", res);
+        return res;
+    }
+
+
 
 
     public static SrcDstRange getInConditionRefactoringRange(DiffEditScriptWithSource diffEditScriptWithSource, List<Refactoring> refactoringList, SrcDstRange srcDstLineRangeOfIf) {
@@ -442,47 +551,81 @@ public class MineCommand implements Callable<Integer> {
         return range;
     }
 
-    public static List<Refactoring> getInConditionRefactoring(DiffEditScriptWithSource diffEditScriptWithSource, List<Refactoring> refactoringList, SrcDstRange srcDstLineRangeOfIf){
-        List<Refactoring> inConditionRefactoring = new LinkedList<>();
+    public static List<Refactoring> refactoringIntersectWithRange(DiffEditScriptWithSource diffEditScriptWithSource, List<Refactoring> refactoringList, SrcDstRange range) {
+        List<Refactoring> res = new LinkedList<>();
+        // left side
         for (Refactoring refactoring : refactoringList) {
             List<SideLocation> leftSideLocations = new LinkedList<>();
-            List<SideLocation> rightSideLocations = new LinkedList<>();
             //left side
             for (SideLocation sideLocation : refactoring.getLeftSideLocations()) {
-                // condition expression range intersects refactoring covered range
                 if (sideLocation.getPath().toString().equals(diffEditScriptWithSource.getDiffEntry().getOldPath())) {
-                    for(Range<Integer> ifRange: srcDstLineRangeOfIf.getSrcRange().asRanges()){
-                        if(sideLocation.getRange().encloses(ifRange)){
-                            leftSideLocations.add(new SideLocation(sideLocation.getPath(),ifRange));
+                    for (Range<Integer> r : range.getSrcRange().asRanges()) {
+                        if(r.isConnected(sideLocation.getRange())){
+                            leftSideLocations.add(new SideLocation(sideLocation.getPath(), r.intersection(sideLocation.getRange())));
                         }
+//                        if (sideLocation.getRange().encloses(r)) {
+//                            leftSideLocations.add(new SideLocation(sideLocation.getPath(), r));
+//                        }
                     }
                 }
             }
 
-            //right side
+            // right side
+            List<SideLocation> rightSideLocations = new LinkedList<>();
             for (SideLocation sideLocation : refactoring.getRightSideLocations()) {
                 if (sideLocation.getPath().toString().equals(diffEditScriptWithSource.getDiffEntry().getNewPath())) {
-                    for(Range<Integer> ifRange: srcDstLineRangeOfIf.getDstRange().asRanges()){
-                        if(sideLocation.getRange().encloses(ifRange)){
-                            rightSideLocations.add(new SideLocation(sideLocation.getPath(),ifRange));
+                    for (Range<Integer> r : range.getDstRange().asRanges()) {
+                        if(r.isConnected(sideLocation.getRange())){
+                            rightSideLocations.add(new SideLocation(sideLocation.getPath(), r.intersection(sideLocation.getRange())));
                         }
+//                        if (sideLocation.getRange().encloses(r)) {
+//                            rightSideLocations.add(new SideLocation(sideLocation.getPath(), r));
+//                        }
                     }
                 }
             }
-
             if(!leftSideLocations.isEmpty() || !rightSideLocations.isEmpty()){
-                inConditionRefactoring.add(new Refactoring(refactoring.getType(),leftSideLocations, rightSideLocations));
+                res.add(new Refactoring(refactoring.getType(),leftSideLocations, rightSideLocations));
             }
         }
-        return inConditionRefactoring;
+        return res;
     }
 
+    public static List<MicroChangeFileSpecified> microChangeIntersectWithRange(List<MicroChangeFileSpecified> microChangeList, SrcDstRange range){
+        List<MicroChangeFileSpecified> res = new LinkedList<>();
+        for(MicroChangeFileSpecified microChange: microChangeList){
+            List<SideLocation> leftSideLocations = new LinkedList<>();
+            //left side
+            for (SideLocation sideLocation : microChange.getLeftSideLocations()) {
+                for (Range<Integer> r : range.getSrcRange().asRanges()) {
+                    if(r.isConnected(sideLocation.getRange())){
+                        leftSideLocations.add(new SideLocation(sideLocation.getPath(), r.intersection(sideLocation.getRange())));
+                    }
 
-//    public static List<Refactoring> getRefactoringIntersectWithRange(List<Refactoring> refactoringList, SrcDstRange range){
-//        // left side
-//
-//        // right side
-//    }
+//                    if (sideLocation.getRange().encloses(r)) {
+//                        leftSideLocations.add(new SideLocation(sideLocation.getPath(), r));
+//                    }
+                }
+            }
+
+            // right side
+            List<SideLocation> rightSideLocations = new LinkedList<>();
+            for (SideLocation sideLocation : microChange.getRightSideLocations()) {
+                    for (Range<Integer> r : range.getDstRange().asRanges()) {
+                        if(r.isConnected(sideLocation.getRange())){
+                            rightSideLocations.add(new SideLocation(sideLocation.getPath(), r.intersection(sideLocation.getRange())));
+                        }
+//                        if (sideLocation.getRange().encloses(r)) {
+//                            rightSideLocations.add(new SideLocation(sideLocation.getPath(), r));
+//                        }
+                    }
+            }
+            if(!leftSideLocations.isEmpty() || !rightSideLocations.isEmpty()){
+                res.add(new MicroChangeFileSpecified(microChange.getType(), microChange.getAction(), leftSideLocations, rightSideLocations));
+            }
+        }
+        return res;
+    }
 
 
     public static SrcDstRange extractRefactoringRange(List<Refactoring> refactoringList){
