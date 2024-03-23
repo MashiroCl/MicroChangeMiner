@@ -29,13 +29,12 @@ public class RemoveCurlyBrace implements MicroChangePattern{
 //                  action.getNode().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(1)));
 //      }
 
-
         if(action.getName().equals("move-tree")
                 && action.getNode().getParent().toString().contains("Block")
-                && action.getNode().getParent().getParent().getType().toString().equals("IfStatement")
+                && action.getNode().getParent().getParent().getType().toString().equals("IfStatement") // ?
                 && action.getNode().getParent().getChildren().size()==1
                 && mappings.containsKey(action.getNode())
-                && mappings.get(action.getNode()).getParent().getType().equals("IfStatement")
+                && mappings.get(action.getNode()).getParent().getType().toString().equals("IfStatement")
                 && action.getNode().getParent().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(0))
                 && action.getNode().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(1)))
             return true;
