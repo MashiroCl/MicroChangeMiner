@@ -20,6 +20,7 @@ import org.mashirocl.refactoringminer.MethodLevelConvertor;
 import org.mashirocl.refactoringminer.Refactoring;
 import org.mashirocl.refactoringminer.RefactoringLoader;
 import org.mashirocl.refactoringminer.SideLocation;
+import org.mashirocl.textualdiff.TextualDiff;
 import org.mashirocl.util.CSVWriter;
 import org.mashirocl.util.CommitMapper;
 import org.mashirocl.util.LinkAttacher;
@@ -103,9 +104,11 @@ public class MineCommand implements Callable<Integer> {
         final DiffFormatter diffFormatter = new DiffFormatter(System.out);
         diffFormatter.setRepository(ra.getRepository());
 
-//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
-        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "8586dd92d305f490ccb452bf516639f23cf4fedf");
+        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "8586dd92d305f490ccb452bf516639f23cf4fedf");
         log.info("Edit Script obtained for {} commits", res.size());
+        Map<String, Map<String, SrcDstRange>> textualDiff = TextualDiff.getTextualDiff(new RepositoryAccess(Path.of(config.methodLevelGitPath)), diffFormatter);
+        log.info("Textual Diff loaded");
 
         if (config.commitMap == null) {
             log.error("lack of commit map");
@@ -162,6 +165,17 @@ public class MineCommand implements Callable<Integer> {
                 SrcDstRange srcDstLineRangeOfIf = new SrcDstRange();
                 if (editScriptStorer instanceof EditScriptStorerIncludeIf) {
                     srcDstLineRangeOfIf = ((EditScriptStorerIncludeIf) editScriptStorer).getSrcDstLineRangeOfIf();
+                }
+
+                // TODO intersect with textual diff range
+                if(textualDiff.containsKey(commitID)
+                        && textualDiff.get(commitID).containsKey(diffEditScriptWithSource.getDiffEntry().getOldPath())){
+                    log.info("before intersection with textual diff {}", textualDiff.get(commitID).get(diffEditScriptWithSource.getDiffEntry().getOldPath()));
+                    log.info("before intersection with textual diff, srcDstLineRangeOfIf {}", srcDstLineRangeOfIf);
+                    srcDstLineRangeOfIf = ActionStatus.getIntersection(
+                            srcDstLineRangeOfIf,
+                            textualDiff.get(commitID).get(diffEditScriptWithSource.getDiffEntry().getOldPath()));
+                    log.info("before intersection with textual diff, srcDstLineRangeOfIf {}", srcDstLineRangeOfIf);
                 }
 
                 // not include If condition, exclude

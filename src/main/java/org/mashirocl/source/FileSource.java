@@ -8,18 +8,12 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
-import com.github.gumtreediff.tree.Tree;
-import org.mashirocl.util.RepositoryAccess;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author mashirocl@gmail.com
@@ -52,6 +46,11 @@ public class FileSource {
         }
         treeWalk.close();
         return source;
+    }
+
+    public List<String> getSourceInLines(){
+        return Arrays.asList(getSource().split("\\R"));
+
     }
 
     public static FileSource of(final String filePath, final RevTree tree, final Repository repo){
