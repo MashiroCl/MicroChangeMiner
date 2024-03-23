@@ -18,35 +18,47 @@ import java.util.Map;
 public class SimplifyConditional implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-        return action.getName().equals("delete-node")
-                && NodePosition.isConditionExpression(action.getNode())!=null
-                && (action.getNode().getLabel().equals("||")||action.getNode().getLabel().equals("&&"));
+//        return action.getName().equals("delete-node")
+//                && NodePosition.isConditionExpression(action.getNode())!=null
+//                && (action.getNode().getLabel().equals("||")||action.getNode().getLabel().equals("&&"));
+        return false;
     }
 
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
-        return matchConditionGumTree(action, mappings);
+        if(action.getName().equals("move-tree")){
+            Tree leftConditionExpression = NodePosition.isConditionExpression(action.getNode());
+            if(leftConditionExpression!=null){
+                if(mappings.containsKey(action.getNode()) &&  NodePosition.isConditionExpression(mappings.get(action.getNode()))!=null){
+                    for(Tree conditionNode: leftConditionExpression.getParent().getChild(0).getChildren()){
+                        if(conditionNode.toString().contains("||") || conditionNode.toString().contains("&&")){
+                            return nodeActions.containsKey(conditionNode) && nodeActions.get(conditionNode).stream().anyMatch(p->p.getName().contains("delete"));
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
-        // condition expression on the left side
-        Tree leftConditionExpression = NodePosition.isConditionExpression(action.getNode());
 
         // left side condition expression
             srcDstRange.getSrcRange().add(
                     RangeOperations.toLineRange(
-                            RangeOperations.toRange(leftConditionExpression), editScriptStorer.getSrcCompilationUnit()
+                            RangeOperations.toRange(action.getNode()), editScriptStorer.getSrcCompilationUnit()
                     )
             );
 
         //right side
-        //added condition expression
-        if(mappings.containsKey(leftConditionExpression)){
+        //condition expression
+        if(mappings.containsKey(action.getNode())){
             srcDstRange.getDstRange().add(
                     RangeOperations.toLineRange(
-                            RangeOperations.toRange(mappings.get(leftConditionExpression)),editScriptStorer.getDstCompilationUnit()
+                            RangeOperations.toRange(mappings.get(action.getNode())),editScriptStorer.getDstCompilationUnit()
                     ));
         }
 
