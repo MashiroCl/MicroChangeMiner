@@ -1,10 +1,13 @@
 package org.mashirocl.match;
 
 import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.Tree;
-import com.google.common.collect.Range;
 import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.microchange.SrcDstRange;
+import org.mashirocl.refactoringminer.RenameRefactoring;
+
+import java.util.Map;
 
 
 /**
@@ -94,4 +97,11 @@ public class ActionStatus {
         return res;
     }
 
+    public static RenameRefactoring getRenamingRefactoring(Action a, Map<String, RenameRefactoring> renamingMap) {
+        if (a.getName().equals("update-node")) {
+            String updateSignature = a.getNode().getLabel() + "@" + ((Update) a).getValue();
+            return renamingMap.containsKey(updateSignature) ? renamingMap.get(updateSignature) : null;
+        }
+        return null;
+    }
 }

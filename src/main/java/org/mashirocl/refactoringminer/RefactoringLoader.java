@@ -52,7 +52,9 @@ public class RefactoringLoader {
         Map<String, List<Refactoring>> map = new HashMap<>();
         if (directoryListing != null) {
             for (File child : directoryListing) {
-                List<Refactoring> refs = load(child.toPath());
+//                List<Refactoring> refs = load(child.toPath());
+                //3/24 considering renaming refactoring
+                List<Refactoring> refs = loadConsiderRenaming(child.toPath());
                 if(!refs.isEmpty()){
                     map.put(child.getName().substring(0,40), refs);
                 }
@@ -109,6 +111,30 @@ public class RefactoringLoader {
         // is Extract related (e.g. Extract Method, Extract Method)
         // is Rename related
         return refactoring.getType().contains("Extract") || refactoring.getType().contains("Rename");
+
+    }
+
+    public static List<Refactoring> loadConsiderRenaming(Path path){
+        List<Refactoring> refactoringList = new LinkedList<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            JsonNode rootNode = objectMapper.readTree(new File(path.toString()));
+            // the initial commit
+            if(!rootNode.has("commits") || rootNode.get("commits").isEmpty()){
+                return refactoringList;
+            }
+            JsonNode refactorings =  rootNode.get("commits").get(0).get("refactorings");
+            for(JsonNode refactoringNode:refactorings){
+                Refactoring refactoring = new Refactoring(refactoringNode);
+                if(RenameRefactoring.isRenameRefactoring(refactoring.getType().replace("\"",""))) {
+                    refactoring = new RenameRefactoring(refactoringNode);
+                }
+                refactoringList.add(refactoring);
+            }
+        } catch (Exception e) {
+            log.error("Error for {}, {}", path, e.getMessage(), e);
+        }
+        return refactoringList;
 
     }
 
