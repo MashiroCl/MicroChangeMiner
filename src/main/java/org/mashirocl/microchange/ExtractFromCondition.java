@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Remove the if that encapsulate the statements.
  * @author mashirocl@gmail.com
  * @since 2024/01/25 15:57
  */
@@ -20,7 +21,7 @@ import java.util.Map;
 public class ExtractFromCondition implements MicroChangePattern{
     /**
      * is `move-tree`
-     * action.getnode() is in the if condition expression of an ifstatement
+     * action.getnode() is in the then/else part of a if-statement
      *  the ifstatement is removed
      * @param action
      * @param mappings
@@ -34,52 +35,11 @@ public class ExtractFromCondition implements MicroChangePattern{
 
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
-        if(!action.getName().equals("move-tree")) return false;
+        if(!action.getName().equals("move-tree") || !mappings.containsKey(action.getNode()) || !action.getNode().isIsomorphicTo(mappings.get(action.getNode()))) return false;
         Tree leftIfNode = NodePosition.isInIf(action.getNode());
+        if(NodePosition.isConditionExpression(action.getNode())!=null) return false; //not in the conditional expression
 
-        if(leftIfNode!=null){
-            if(nodeActions.containsKey(leftIfNode)) log.info("nodeActions.get(leftIfNode) {}", nodeActions.get(leftIfNode));
-            // the condition on the left side is removed
-            // Note the GumTree misIdentify the following case. To increase accuracy, not consider the following case
-            // e.g. https://github.com/MashiroCl/my-refactoring-toy-example/commit/2bab7ef422f5a211224dc303d800068abe93e448: the !flag will be regarded as matched
-            //                    else {     // the moved Expression is in if, but different with the original one
-            //                        if(!mappings.containsKey(leftIfNode)){
-            //                            return true;
-            //                        }else {
-            //                            return !mappings.get(leftIfNode).equals(rightIfNode);
-            //                        }
-            //                    }
-            return nodeActions.containsKey(leftIfNode) && nodeActions.get(leftIfNode).stream().anyMatch(a -> a.getName().equals("delete-tree") || a.getName().equals("delete-node"));
-            }
-
-
-//        Tree leftConditionExpressionNode = isInIfCondition(action.getNode());
-//        if(leftConditionExpressionNode!=null){
-//            Tree leftIfNode = leftConditionExpressionNode.getParent();
-//            if(nodeActions.containsKey(leftIfNode) && nodeActions.get(leftIfNode).stream().anyMatch(a -> a.getName().equals("delete-tree")||a.getName().equals("delete-node"))) // the condition on the left side is removed
-//            {
-//                if(mappings.containsKey(action.getNode())){
-//                    Tree movedExpression = mappings.get(action.getNode());
-//                    // movedExpression is not the condition expression of an If
-//                    return isInIfCondition(movedExpression) == null;
-//                }
-//            }
-//        }
-
-//        if(action.getName().equals("move-tree")
-//                && action.getNode().getParent().getParent().getType().name.equals("IfStatement")
-//                && mappings.containsKey(action.getNode())
-//                && !mappings.get(action.getNode()).getParent().getType().name.equals("IfStatement")){
-//            if(nodeActions.containsKey(action.getNode().getParent())){  // the then/else block
-//                for(Action a:nodeActions.get(action.getNode().getParent())){
-//                    if(a.getName().equals("delete-node") || a.getName().equals("delete-tree")){
-//                        return true;
-//                    }
-//                }
-
-//            }
-//        }
-        return false;
+        return leftIfNode!=null && nodeActions.containsKey(leftIfNode) && nodeActions.get(leftIfNode).stream().anyMatch(a -> a.getName().equals("delete-tree") || a.getName().equals("delete-node"));
     }
 
 
