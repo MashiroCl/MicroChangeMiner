@@ -100,7 +100,7 @@ public class RefactoringLoader {
                     iteratorRef.remove();
                 }
                 // remove some refactorings
-                if(ref.getType().contains("Annotation")){
+                else if(ref.getType().contains("Annotation")){
                     iteratorRef.remove();
                 }
             }
