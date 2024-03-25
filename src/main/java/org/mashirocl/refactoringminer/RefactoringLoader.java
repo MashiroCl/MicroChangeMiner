@@ -99,6 +99,10 @@ public class RefactoringLoader {
                 if(ref.getLeftSideLocations().isEmpty() && ref.getRightSideLocations().isEmpty()){
                     iteratorRef.remove();
                 }
+                // remove some refactorings
+                if(ref.getType().contains("annotation")){
+                    iteratorRef.remove();
+                }
             }
             // remove the commit if no refactorings remain
             if(curIteratorMap.getValue().isEmpty()){
