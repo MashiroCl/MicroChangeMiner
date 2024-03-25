@@ -78,7 +78,6 @@ public class TextualDiff {
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
-        System.out.println(res);
         return res;
     }
 }
