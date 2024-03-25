@@ -88,6 +88,7 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ReverseThenElse());
         patternMatcherGumTree.addMicroChange(new ReverseConditional());
         patternMatcherGumTree.addMicroChange(new SimplifyConditional());
+        patternMatcherGumTree.addMicroChange(new ChangeLogicOperator());
 //        patternMatcherGumTree.addMicroChange(new UnifyCondition());
 
     }
@@ -102,7 +103,7 @@ public class MineCommand implements Callable<Integer> {
         diffFormatter.setRepository(ra.getRepository());
 
         Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
-//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "8586dd92d305f490ccb452bf516639f23cf4fedf");
+//        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "25e1f38691be82100a0c017ba37b38eeba72b148");
         log.info("Edit Script obtained for {} commits", res.size());
         Map<String, Map<String, SrcDstRange>> textualDiff = TextualDiff.getTextualDiff(new RepositoryAccess(Path.of(config.methodLevelGitPath)), diffFormatter);
         log.info("Textual Diff loaded");
@@ -198,7 +199,6 @@ public class MineCommand implements Callable<Integer> {
 
                     if (!microChanges.isEmpty()) {
                         microChangesPerFile.addAll(microChanges);
-                        log.info("microChangesPerFile {}", microChangesPerFile);
                         numberMicroChangeContainedConditionRelatedAction += 1;
                     }
 
@@ -350,7 +350,6 @@ public class MineCommand implements Callable<Integer> {
         CSVWriter.writeCommit2CSV(config.outputJsonPath, config.outputCsvPath);
 
 
-
         CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
 
 
@@ -415,21 +414,15 @@ public class MineCommand implements Callable<Integer> {
                 refactoringRange.getDstRange().add(sideLocation.getRange());
             }
         }
-        //TODO remove
-        log.info("get refactoring Range: {}", refactoringRange);
         return  refactoringRange;
     }
 
     public static SrcDstRange getMicroChangeRangeInFile(List<MicroChangeFileSpecified> microChanges, String oldPath, String newPath){
         SrcDstRange microChangeRange = new SrcDstRange();
 
-        log.info("oldPath: {}", oldPath);
-        log.info("newPath: {}", newPath);
-        log.info("microChange: {}", microChanges);
         for(MicroChangeFileSpecified microChange: microChanges){
             // refactoring left side
             for(SideLocation sideLocation: microChange.getLeftSideLocations()){
-                log.info("sideLocations: {}", sideLocation);
                 if(!sideLocation.getPath().toString().equals(oldPath)){
                     continue;
                 }
@@ -443,7 +436,6 @@ public class MineCommand implements Callable<Integer> {
                 microChangeRange.getDstRange().add(sideLocation.getRange());
             }
         }
-        log.info("get microchange Range: {}", microChangeRange);
         return  microChangeRange;
     }
 
