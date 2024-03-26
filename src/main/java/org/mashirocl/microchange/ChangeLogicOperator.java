@@ -24,12 +24,11 @@ public class ChangeLogicOperator implements MicroChangePattern{
 
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
-        log.info("action {}", action);
-        log.info("treestring {}", action.getNode().toTreeString());
-        log.info("label {}", action.getNode().getLabel());
-        if(action.getName().equals("update-node")) log.info("value {}",((Update)action).getValue());
-        return action.getName().equals("update-node") && (action.getNode().getLabel().equals("&&") && ((Update)action).getValue().equals("||"))
-                || (action.getNode().getLabel().equals("||") && ((Update)action).getValue().equals("&&"));
+        if(action.getName().equals("update-node")) {
+            return (action.getNode().getLabel().equals("&&") && ((Update) action).getValue().equals("||"))
+                    || (action.getNode().getLabel().equals("||") && ((Update) action).getValue().equals("&&"));
+        }
+        return false;
     }
 
     @Override
