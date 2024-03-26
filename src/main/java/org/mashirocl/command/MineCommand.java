@@ -60,6 +60,9 @@ public class MineCommand implements Callable<Integer> {
         @Option(names = {"--original"}, description = "the original file-level repository git path")
         String originalRepoGitPath;
 
+        @Option(names = {"--notCoveredPath"}, description = "the output path for conditional expressions that are not covered by micro-change & refactoring")
+        String notCoveredPath;
+
 //        @Option(names = {"--brief"}, description = "the brief output")
 //        boolean brief;
     }
@@ -136,7 +139,6 @@ public class MineCommand implements Callable<Integer> {
         int[] totalADCodeChangeLines = new int[]{0, 0};
         int[] microADChangeCoveredLines = new int[]{0, 0};
         int[] textDiffLines = new int[]{0, 0};
-        int [] refCoveredCondition = new int[]{0, 0};
         int [] mrADChangeCoveredLines = new int[]{0,0};
 
         for (String commitID : res.keySet()) {
@@ -304,32 +306,32 @@ public class MineCommand implements Callable<Integer> {
                 }
 
 
-                if(!treeActionMicroChangePerFile.getSrcRange().isEmpty()){
-                    //intersection of text range and tree range
-                    treeActionMicroChangePerFile.getSrcRange().removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
-                    // intersection of micro-change range with tree range: because the calculation of micro-change range is not using the action node, while the tree range is, sometimes
-                    // the micro-change covers a larger range than the tree range.
-                    treeActionMicroChangePerFile.getSrcRange().removeAll(treeActionPerFile.getSrcRange().complement());
-                    log.info("micro-change covered deleted lines {}", treeActionMicroChangePerFile.getSrcRange());
-                    microADChangeCoveredLines[0] += coveredLength(treeActionMicroChangePerFile.getSrcRange());
-                }
-
-                if(!treeActionMicroChangePerFile.getDstRange().isEmpty()){
-                    //intersection of text range and tree range
-                    treeActionMicroChangePerFile.getDstRange().removeAll(srcDstLineRangeOfIf.getDstRange().complement());
-                    // intersection of micro-change range with tree range: because the calculation of micro-change range is not using the action node, while the tree range is, sometimes
-                    // the micro-change covers a larger range than the tree range.
-                    treeActionMicroChangePerFile.getDstRange().removeAll(treeActionPerFile.getDstRange().complement());
-                    log.info("micro-change covered added lines {}", treeActionMicroChangePerFile.getDstRange());
-                    microADChangeCoveredLines[1] += coveredLength(treeActionMicroChangePerFile.getDstRange());
-                }
-
-//                if(!microChangeUnionRefRange.getSrcRange().isEmpty()){
-//                    log.info("micro-change U refactoring covered deleted lines {}", microChangeUnionRefRange.getSrcRange());
+//                if(!treeActionMicroChangePerFile.getSrcRange().isEmpty()){
+//                    //intersection of text range and tree range
+//                    treeActionMicroChangePerFile.getSrcRange().removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
+//                    // intersection of micro-change range with tree range: because the calculation of micro-change range is not using the action node, while the tree range is, sometimes
+//                    // the micro-change covers a larger range than the tree range.
+//                    treeActionMicroChangePerFile.getSrcRange().removeAll(treeActionPerFile.getSrcRange().complement());
+//                    log.info("micro-change covered deleted lines {}", treeActionMicroChangePerFile.getSrcRange());
+//                    microADChangeCoveredLines[0] += coveredLength(treeActionMicroChangePerFile.getSrcRange());
 //                }
-//                if(!microChangeUnionRefRange.getDstRange().isEmpty()){
-//                    log.info("micro-change U refactoring covered added lines {}", microChangeUnionRefRange.getDstRange());
-//                }
+
+                if(!treeDiffInConditionMicroChange.isEmpty()){
+                    RangeSet<Integer> rangeSet = TreeRangeSet.create();
+                    for(MicroChangeFileSpecified m:treeDiffInConditionMicroChange){
+                        m.getLeftSideLocations().forEach(p->rangeSet.add(p.getRange()));
+                    }
+                    microADChangeCoveredLines[0] += coveredLength(rangeSet);
+
+                }
+                if(!treeDiffInConditionMicroChange.isEmpty()){
+                    RangeSet<Integer> rangeSet = TreeRangeSet.create();
+                    for(MicroChangeFileSpecified m:treeDiffInConditionMicroChange){
+                        m.getRightSideLocations().forEach(p->rangeSet.add(p.getRange()));
+                    }
+                    microADChangeCoveredLines[1] += coveredLength(rangeSet);
+
+                }
 
 
                 // store mined micro changes
@@ -350,7 +352,12 @@ public class MineCommand implements Callable<Integer> {
         CSVWriter.writeCommit2CSV(config.outputJsonPath, config.outputCsvPath);
 
 
-        CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
+        String originalRepoGitPath;
+        if(config.notCoveredPath==null) {
+            CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
+        }else {
+            CSVWriter.writeNotCoveredToJson(notCovered, config.notCoveredPath);
+        }
 
 
         logTreeDALines(totalADCodeChangeLines);
@@ -358,7 +365,6 @@ public class MineCommand implements Callable<Integer> {
         logMicroChangeCoveredDALines(microADChangeCoveredLines);
         logMicroChangeCoverageRatio(microADChangeCoveredLines, totalADCodeChangeLines);
         logMicroChangeWithRefCoveregeRatio(mrADChangeCoveredLines, totalADCodeChangeLines);
-        logRefactoringCoverageRatio(refCoveredCondition);
         logActions(numberTotalConditionRelatedActionNumber, numberMicroChangeContainedConditionRelatedAction);
 
 //        log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
@@ -378,22 +384,26 @@ public class MineCommand implements Callable<Integer> {
     public static int coveredLength(RangeSet<Integer> rangeSet) {
         int coveredLength = 0;
         for (Range<Integer> range : rangeSet.asRanges()) {
-            int length = 0;
-            if (range.hasLowerBound() && range.hasUpperBound()) {
-                // Calculate the basic length
-                length = range.upperEndpoint() - range.lowerEndpoint() - 1; // Subtract 1 because we start assuming both ends are open
-
-                // Adjust based on the inclusivity of the endpoints
-                if (range.lowerBoundType() == BoundType.CLOSED) {
-                    length += 1; // Include the lower endpoint if it's closed
-                }
-                if (range.upperBoundType() == BoundType.CLOSED) {
-                    length += 1; // Include the upper endpoint if it's closed
-                }
-            }
-            coveredLength += length;
+            coveredLength += MineCommand.coveredLength(range);
         }
         return coveredLength;
+    }
+
+    public static int coveredLength(Range<Integer> range){
+        int length = 0;
+        if (range.hasLowerBound() && range.hasUpperBound()) {
+            // Calculate the basic length
+            length = range.upperEndpoint() - range.lowerEndpoint() - 1; // Subtract 1 because we start assuming both ends are open
+
+            // Adjust based on the inclusivity of the endpoints
+            if (range.lowerBoundType() == BoundType.CLOSED) {
+                length += 1; // Include the lower endpoint if it's closed
+            }
+            if (range.upperBoundType() == BoundType.CLOSED) {
+                length += 1; // Include the upper endpoint if it's closed
+            }
+        }
+        return length;
     }
 
     public static SrcDstRange getRefactoringRangeInFile(List<Refactoring> refactorings, String oldPath, String newPath){
