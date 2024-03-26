@@ -92,6 +92,7 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ReverseConditional());
         patternMatcherGumTree.addMicroChange(new SimplifyConditional());
         patternMatcherGumTree.addMicroChange(new ChangeLogicOperator());
+        log.info("{}",patternMatcherGumTree.listLoadedMicroChanges());
 //        patternMatcherGumTree.addMicroChange(new UnifyCondition());
 
     }

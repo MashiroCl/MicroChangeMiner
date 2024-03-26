@@ -63,7 +63,9 @@ public class PatternMatcherGumTree implements PatternMatcher {
         return microChanges;
     }
 
-
+    public String listLoadedMicroChanges(){
+        return "load "+microChangePatternList.size()+" types:"+ microChangePatternList;
+    }
 
 
 //    public void loadAllMicroChanges(){

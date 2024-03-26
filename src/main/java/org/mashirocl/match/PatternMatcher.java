@@ -18,4 +18,6 @@ public interface PatternMatcher {
    List<MicroChange> match(Action action, Map<Tree, Tree> mapping);
 
     List<MicroChange> match(Action action, Map<Tree, Tree> mapping, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer);
+
+    public String listLoadedMicroChanges();
 }
