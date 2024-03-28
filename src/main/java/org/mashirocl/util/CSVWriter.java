@@ -62,7 +62,7 @@ public class CSVWriter {
                     new File(inputPath),
                     objectMapper.getTypeFactory().constructCollectionType(List.class, CommitDAO.class));
 
-            String [] header = {"Method-level CommitID", "Url","M/R", "Type","OldPosition", "NewPosition","Review" , "Note"};
+            String [] header = {"Method-level CommitID", "Url","M/R", "Type","OldPosition", "NewPosition","Review" , "Note", "Action/Description"};
             csvWriter.writeNext(header);
             for(CommitDAO commitDAO:commitDAOs){
                 commitDAO.getMicroChanges().forEach(p -> {
@@ -74,7 +74,8 @@ public class CSVWriter {
                             p.getLeftSideLocations().toString(),
                             p.getRightSideLocations().toString(),
                             "",
-                            ""
+                            "",
+                            p.getAction()
                     };
                     csvWriter.writeNext(data);
                 });
@@ -87,7 +88,7 @@ public class CSVWriter {
                             p.getLeftSideLocations().toString(),
                             p.getRightSideLocations().toString(),
                             "",
-                            ""
+                            "",
                     };
                     csvWriter.writeNext(data);
                 });
@@ -202,7 +203,7 @@ public class CSVWriter {
 
 
     public static void writeCSV(List<MicroChangeFileSpecified> microChangeFileSpecifiedList){
-        microChangeFileSpecifiedList.stream().map(p -> new MicroChangeDAO(p.getType(),p.getLeftSideLocations(),p.getRightSideLocations())).toList();
+        microChangeFileSpecifiedList.stream().map(p -> new MicroChangeDAO(p.getType(),p.getAction(),p.getLeftSideLocations(),p.getRightSideLocations())).toList();
     }
 
 

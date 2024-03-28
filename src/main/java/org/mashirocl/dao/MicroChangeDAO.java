@@ -27,17 +27,21 @@ public class MicroChangeDAO {
     private List<SideLocationDAO> leftSideLocations;
     @JsonProperty("rightSideLocations")
     private List<SideLocationDAO> rightSideLocations;
+    @JsonProperty("action")
+    private String action;
 
     public MicroChangeDAO(MicroChangeFileSpecified microChange){
         type = microChange.getType();
+        action = microChange.getAction();
         leftSideLocations = new LinkedList<>();
         rightSideLocations = new LinkedList<>();
         microChange.getLeftSideLocations().forEach(p->leftSideLocations.add(new SideLocationDAO(p)));
         microChange.getRightSideLocations().forEach(p->rightSideLocations.add(new SideLocationDAO(p)));
     }
 
-    public MicroChangeDAO(String type, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations){
+    public MicroChangeDAO(String type, String action, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations){
         this.type = type;
+        this.action = action;
         this.leftSideLocations = new LinkedList<>();
         this.rightSideLocations = new LinkedList<>();
         leftSideLocations.forEach(p->this.leftSideLocations.add(new SideLocationDAO(p)));
