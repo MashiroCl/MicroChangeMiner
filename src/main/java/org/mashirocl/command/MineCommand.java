@@ -141,6 +141,12 @@ public class MineCommand implements Callable<Integer> {
         int[] microADChangeCoveredLines = new int[]{0, 0};
         int[] textDiffLines = new int[]{0, 0};
         int [] mrADChangeCoveredLines = new int[]{0,0};
+        int [] number_of_conditional_expression = new int []{0,0};
+        // # commits contain a change to conditional expression
+        int conditionalExpressionChangeContainedCommit = 0;
+        int numberOfFilesProcessed = 0;
+
+        log.info("Number of commits to be processed: {}", res.size());
 
         for (String commitID : res.keySet()) {
             List<MicroChangeDAO> microChangeDAOs = new LinkedList<>();
@@ -164,6 +170,7 @@ public class MineCommand implements Callable<Integer> {
 //            log.info("refactoringList {}", refactoringList);
             for (DiffEditScriptWithSource diffEditScriptWithSource : res.get(commitID)) {
                 log.info("DiffEditScriptWithSource {}", diffEditScriptWithSource);
+                numberOfFilesProcessed++;
                 EditScript editScript = diffEditScriptWithSource.getEditScript();
                 EditScriptStorer editScriptStorer = diffEditScriptWithSource.getEditScriptStorer();
                 Map<Tree, Tree> mappings = EditScriptExtractor.mappingStoreToMap(editScriptStorer.getMappingStore());
@@ -172,11 +179,14 @@ public class MineCommand implements Callable<Integer> {
                 SrcDstRange srcDstLineRangeOfIf = new SrcDstRange();
                 if (editScriptStorer instanceof EditScriptStorerIncludeIf) {
                     srcDstLineRangeOfIf = ((EditScriptStorerIncludeIf) editScriptStorer).getSrcDstLineRangeOfIf();
+                    number_of_conditional_expression[0]+= coveredLength(srcDstLineRangeOfIf.getSrcRange());
+                    number_of_conditional_expression[1]+= coveredLength(srcDstLineRangeOfIf.getDstRange());
                 }
 
                 // intersect with textual diff
                 if(textualDiff.containsKey(commitID)
                         && textualDiff.get(commitID).containsKey(diffEditScriptWithSource.getDiffEntry().getOldPath())){
+
                     srcDstLineRangeOfIf = ActionStatus.getIntersection(
                             srcDstLineRangeOfIf,
                             textualDiff.get(commitID).get(diffEditScriptWithSource.getDiffEntry().getOldPath()));
@@ -189,7 +199,6 @@ public class MineCommand implements Callable<Integer> {
                 }
 
                 SrcDstRange treeActionPerFile = new SrcDstRange();
-                SrcDstRange treeActionMicroChangePerFile = new SrcDstRange();
                 List<MicroChange> microChangesPerFile = new LinkedList<>();
 
                 log.info("# of actions {}", editScript.size());
@@ -218,7 +227,6 @@ public class MineCommand implements Callable<Integer> {
                     }
 
                 }
-
 
                 // micro-change ∩ tree-diff ∩ textual-if-location
                 List<MicroChangeFileSpecified> microChangeFileSpecifiedListPerFile = new LinkedList<>();
@@ -277,23 +285,12 @@ public class MineCommand implements Callable<Integer> {
                     refactoringDAOs.add(new RefactoringDAO(r));
                 }
 
-                // action touched if range
-                int textRemoved = coveredLength(srcDstLineRangeOfIf.getSrcRange());
-                int textAdded = coveredLength(srcDstLineRangeOfIf.getDstRange());
-
-
-                // Some purely addition/deletion are regarded as Modify-Change-Type by jgit
-                if (textRemoved > 0 && textAdded > 0) {
-                    textDiffLines[0] += textRemoved;
-                    textDiffLines[1] += textAdded;
-                }
-
 
                 if(!treeActionPerFile.getSrcRange().isEmpty()){
                     //intersection of text range and tree range
                     treeActionPerFile.getSrcRange().removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
-                    log.info("text if range src: {}", srcDstLineRangeOfIf.getSrcRange());
-                    log.info("tree diff: lines deleted {}", treeActionPerFile.getSrcRange());
+                    log.info("conditional expression range src: {}", srcDstLineRangeOfIf.getSrcRange());
+                    log.info("conditional expression lines deleted {}", treeActionPerFile.getSrcRange());
                     totalADCodeChangeLines[0] += coveredLength(treeActionPerFile.getSrcRange());
                 }
 
@@ -301,21 +298,14 @@ public class MineCommand implements Callable<Integer> {
                 if (!treeActionPerFile.getDstRange().isEmpty()) {
                     //intersection of text range and tree range
                     treeActionPerFile.getDstRange().removeAll(srcDstLineRangeOfIf.getDstRange().complement());
-                    log.info("text if range dst: {}", srcDstLineRangeOfIf.getDstRange());
-                    log.info("tree diff: lines added {}", treeActionPerFile.getDstRange());
+                    log.info("conditional expression range dst: {}", srcDstLineRangeOfIf.getDstRange());
+                    log.info("conditional expression lines added {}", treeActionPerFile.getDstRange());
                     totalADCodeChangeLines[1] += coveredLength(treeActionPerFile.getDstRange());
                 }
 
-
-//                if(!treeActionMicroChangePerFile.getSrcRange().isEmpty()){
-//                    //intersection of text range and tree range
-//                    treeActionMicroChangePerFile.getSrcRange().removeAll(srcDstLineRangeOfIf.getSrcRange().complement());
-//                    // intersection of micro-change range with tree range: because the calculation of micro-change range is not using the action node, while the tree range is, sometimes
-//                    // the micro-change covers a larger range than the tree range.
-//                    treeActionMicroChangePerFile.getSrcRange().removeAll(treeActionPerFile.getSrcRange().complement());
-//                    log.info("micro-change covered deleted lines {}", treeActionMicroChangePerFile.getSrcRange());
-//                    microADChangeCoveredLines[0] += coveredLength(treeActionMicroChangePerFile.getSrcRange());
-//                }
+                if(!treeActionPerFile.isEmpty()){
+                    conditionalExpressionChangeContainedCommit +=1;
+                }
 
                 if(!treeDiffInConditionMicroChange.isEmpty()){
                     RangeSet<Integer> rangeSet = TreeRangeSet.create();
@@ -360,9 +350,10 @@ public class MineCommand implements Callable<Integer> {
             CSVWriter.writeNotCoveredToJson(notCovered, config.notCoveredPath);
         }
 
-
+        logConditionalExpressionChangeContainedCommit(conditionalExpressionChangeContainedCommit);
+        logNumberOfFilesBeingProcessed(numberOfFilesProcessed);
         logTreeDALines(totalADCodeChangeLines);
-        logTextDALines(textDiffLines);
+//        logTextDALines(textDiffLines);
         logMicroChangeCoveredDALines(microADChangeCoveredLines);
         logMicroChangeCoverageRatio(microADChangeCoveredLines, totalADCodeChangeLines);
         logMicroChangeWithRefCoveregeRatio(mrADChangeCoveredLines, totalADCodeChangeLines);
@@ -660,12 +651,6 @@ public class MineCommand implements Callable<Integer> {
         log.info("micro-change covered deleted lines/number of total lines of tree code deleted: {}/{}=" + String.format("%.4f", (float) microADChangeCoveredLines[0] / totalADCodeChangeLines[0]), microADChangeCoveredLines[0], totalADCodeChangeLines[0]);
         log.info("micro-change covered added lines/number of total lines of tree code added: {}/{}=" + String.format("%.4f", (float) microADChangeCoveredLines[1] / totalADCodeChangeLines[1]), microADChangeCoveredLines[1], totalADCodeChangeLines[1]);
     }
-//    public static void logRefactoringCoverageRatio(int [] refCoveredLines, int [] refCoveredMicroChange,int [] totalADCodeChangeLines,int []  microADChangeCoveredLines){
-//        log.info("refactoring covered deleted lines/number of total lines of tree code deleted: {}/{}=" + String.format("%.4f", (float) refCoveredLines[0] / totalADCodeChangeLines[0]), refCoveredLines[0], totalADCodeChangeLines[0]);
-//        log.info("refactoring covered added lines/number of total lines of tree code added: {}/{}=" + String.format("%.4f", (float) refCoveredLines[1] / totalADCodeChangeLines[1]), refCoveredLines[1], totalADCodeChangeLines[1]);
-//        log.info("refactoring covered micro-change deleted lines/micro-change covered deleted lines: {}/{}=" + String.format("%.4f", (float) refCoveredMicroChange[0] / microADChangeCoveredLines[0]), refCoveredMicroChange[0], microADChangeCoveredLines[0]);
-//        log.info("refactoring covered micro-change added lines/micro-change covered added lines: {}/{}=" + String.format("%.4f", (float) refCoveredMicroChange[1] / microADChangeCoveredLines[1]), refCoveredMicroChange[1], microADChangeCoveredLines[1]);
-//    }
 
     public static void logRefactoringCoverageRatio(int [] refCoveredCondition){
         log.info("refactoring covered deleted conditional lines :{}", refCoveredCondition[0]);
@@ -676,6 +661,14 @@ public class MineCommand implements Callable<Integer> {
         log.info("Total number of actions: {}", numberTotalActionNumber);
         log.info("Micro-change contained actions: {}", numberMicroChangeContainedAction);
         log.info("micro-change contained action/number of total actions: {}/{}=" + String.format("%.4f", (float) numberMicroChangeContainedAction / numberTotalActionNumber), numberMicroChangeContainedAction, numberTotalActionNumber);
+    }
+
+    public static void logConditionalExpressionChangeContainedCommit(int numberOfConditionalExpression){
+        log.info("Number of conditional-expression-change contained commit: {}", numberOfConditionalExpression);
+    }
+
+    public static void logNumberOfFilesBeingProcessed(int numberOfFilesBeingProcessed){
+        log.info("number of files being processed: {}", numberOfFilesBeingProcessed);
     }
 
 }
