@@ -26,8 +26,8 @@ public class RenameRefactoring extends Refactoring{
     private String newName;
     private String rename;
 
-    public RenameRefactoring(String type, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations) {
-        super(type, leftSideLocations, rightSideLocations);
+    public RenameRefactoring(String type, String description, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations) {
+        super(type, description, leftSideLocations, rightSideLocations);
     }
 
     public RenameRefactoring(JsonNode refactoringNode) {

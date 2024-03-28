@@ -532,7 +532,7 @@ public class MineCommand implements Callable<Integer> {
                 }
             }
             if(!leftSideLocations.isEmpty() || !rightSideLocations.isEmpty()){
-                res.add(new Refactoring(refactoring.getType(),leftSideLocations, rightSideLocations));
+                res.add(new Refactoring(refactoring.getType(),refactoring.getDescription(),leftSideLocations, rightSideLocations));
             }
         }
         return res;

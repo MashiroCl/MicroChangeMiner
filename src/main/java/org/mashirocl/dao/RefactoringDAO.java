@@ -28,9 +28,12 @@ public class RefactoringDAO {
     private List<SideLocationDAO> leftSideLocations;
     @JsonProperty("rightSideLocations")
     private List<SideLocationDAO> rightSideLocations;
+    @JsonProperty("description")
+    private String description;
 
     public RefactoringDAO(Refactoring refactoring){
         type = refactoring.getType();
+        description = refactoring.getDescription();
         leftSideLocations = new LinkedList<>();
         rightSideLocations = new LinkedList<>();
         refactoring.getLeftSideLocations().forEach(p->leftSideLocations.add(new SideLocationDAO(p)));

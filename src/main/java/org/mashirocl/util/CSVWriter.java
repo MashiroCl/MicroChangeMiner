@@ -89,6 +89,7 @@ public class CSVWriter {
                             p.getRightSideLocations().toString(),
                             "",
                             "",
+                            p.getDescription()
                     };
                     csvWriter.writeNext(data);
                 });

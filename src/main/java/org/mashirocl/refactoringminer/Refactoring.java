@@ -20,11 +20,13 @@ import java.util.List;
 @AllArgsConstructor
 public class Refactoring {
     private String type;
+    private String description;
     private List<SideLocation> leftSideLocations = new LinkedList<>();
     private List<SideLocation> rightSideLocations = new LinkedList<>();
 
     public Refactoring(JsonNode refactoringNode){
         type = refactoringNode.get("type").toString();
+        description = refactoringNode.get("description").toString();
         for(JsonNode leftSideLocation: refactoringNode.get("leftSideLocations")){
             leftSideLocations.add(new SideLocation(leftSideLocation));
         }
