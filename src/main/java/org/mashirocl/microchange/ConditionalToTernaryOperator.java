@@ -49,6 +49,9 @@ public class ConditionalToTernaryOperator implements MicroChangePattern{
         // being removed expressions in Then & Else
         Tree ifStatement = action.getNode().getParent();
         for(Tree node:ifStatement.getChildren()){
+            if(!nodeActions.containsKey(node)) {
+                continue;
+            }
             for(Action a: nodeActions.get(node)){
                 srcDstRange.getSrcRange().add(
                         RangeOperations.toLineRange(

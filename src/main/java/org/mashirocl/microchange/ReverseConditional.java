@@ -186,6 +186,8 @@ public class ReverseConditional implements MicroChangePattern{
     private boolean isDeleteExclamationPrefix(Action action, Map<Tree, Tree> mappings){
         //TODO:  action.getNode().getParent().getParent() can be a InfixExpression, e.g., if A&B&C -> if A&!B&C
         return action.getName().equals("delete-node")
+                && action.getNode().getParent()!=null
+                && action.getNode().getParent().getParent()!=null
                 && action.getNode().getParent().getParent().getType().name.equals("IfStatement")
                 && action.getNode().toString().contains("PREFIX_EXPRESSION_OPERATOR: !")
                 && mappings.containsKey(action.getNode().getParent().getChild(1)) // the expression of the prefix expression still exists

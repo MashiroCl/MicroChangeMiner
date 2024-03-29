@@ -63,6 +63,9 @@ public class ConditionalToBooleanReturn implements MicroChangePattern{
         // being removed return statement in Then & Else
         Tree ifStatement = action.getNode().getParent();
         for(Tree node:ifStatement.getChildren()){
+            if(!nodeActions.containsKey(node)){
+                continue;
+            }
             for(Action a: nodeActions.get(node)){
                 srcDstRange.getSrcRange().add(RangeOperations.toLineRange(
                         RangeOperations.toRange(a.getNode()),
