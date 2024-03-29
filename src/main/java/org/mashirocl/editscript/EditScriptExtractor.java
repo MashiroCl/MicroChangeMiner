@@ -79,10 +79,10 @@ public class EditScriptExtractor {
                     // exclude non-source code file (on both file-level/method-level)
                     String oldPath = diffEntry.getOldPath();
                     String newPath = diffEntry.getNewPath();
-                    if(!oldPath.contains(".java") &&
-                            !newPath.contains(".java") &&
-                            !oldPath.contains(".mjava") &&
-                            !newPath.contains(".mjava")){
+                    if(!oldPath.endsWith(".java") &&
+                            !newPath.endsWith(".java") &&
+                            !oldPath.endsWith(".mjava") &&
+                            !newPath.endsWith(".mjava")){
 //                        log.info("Change not to source code file, oldpath: {}, newpath: {}", oldPath, newPath);
                         continue;
                     }
@@ -94,7 +94,8 @@ public class EditScriptExtractor {
 
                     SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
                             FileSource.of(newPath, newTree, ra.getRepository()));
-
+                    log.info("old path {}", oldPath);
+                    log.info("new path {}", newPath);
                     MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
 
                     EditScript editScript = editScriptGenerator.computeActions(mapping);
