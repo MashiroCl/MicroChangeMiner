@@ -28,7 +28,8 @@ public class ConditionalToTernaryOperator implements MicroChangePattern{
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
         return action.getName().equals("move-tree")
                 && action.getNode().getParent().getType().name.equals("IfStatement")
-                && ((Move)action).getParent().getType().name.equals("ConditionalExpression");
+                && mappings.containsKey(action.getNode())
+                && mappings.get(action.getNode()).getParent().getType().name.equals("ConditionalExpression");
 
     }
 
@@ -63,36 +64,10 @@ public class ConditionalToTernaryOperator implements MicroChangePattern{
         // added ternary expression
         srcDstRange.getDstRange().add(
                 RangeOperations.toLineRange(
-                        RangeOperations.toRange(((Move)action).getParent()), editScriptStorer.getDstCompilationUnit()
+                        RangeOperations.toRange((mappings.get(action.getNode())).getParent()), editScriptStorer.getDstCompilationUnit()
                 )
         );
 
         return srcDstRange;
-    }
-
-    public List<Position> getPosition(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        List<Position> positions = new LinkedList<>();
-        // left side
-        // being moved condition
-        Position movedCondition = new Position(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(action.getNode().getEndPos()));
-        positions.add(movedCondition);
-        // being removed expressions in Then & Else
-        Tree ifStatement = action.getNode().getParent();
-        for(Tree node:ifStatement.getChildren()){
-            for(Action a: nodeActions.get(node)){
-                positions.add(new Position(
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getPos()),
-                        editScriptStorer.getSrcCompilationUnit().getLineNumber(a.getNode().getEndPos())));
-            }
-        }
-        //right side
-        // added ternary expression
-        positions.add(new Position(
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(((Move)action).getParent().getPos()),
-                editScriptStorer.getSrcCompilationUnit().getLineNumber(((Move)action).getParent().getEndPos())
-        ));
-        return positions;
     }
 }
