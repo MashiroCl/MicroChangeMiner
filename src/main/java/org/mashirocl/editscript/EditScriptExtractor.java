@@ -94,8 +94,6 @@ public class EditScriptExtractor {
 
                     SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
                             FileSource.of(newPath, newTree, ra.getRepository()));
-                    log.info("old path {}", oldPath);
-                    log.info("new path {}", newPath);
                     MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
 
                     EditScript editScript = editScriptGenerator.computeActions(mapping);
