@@ -14,6 +14,7 @@ def load_logs():
     res = {}
     root_path = Path(LOG_PATH)
     for p in root_path.iterdir():
+        print(p)
         res[p.stem] = mine_data_in_log(p)
     return res
 
@@ -71,15 +72,43 @@ def build_csv(data, csv_file):
         for row in flattened_data_sorted:
             writer.writerow(row)
 
+def calculate_microchange_line_coverage():
+    microchange_added = 0
+    microchange_deleted = 0
+    if_added = 0
+    if_deleted = 0
+    res = {}
+    root_path = Path(LOG_PATH)
+    for p in root_path.iterdir():
+        with open(p,"r") as f:
+            data = f.readlines()
+            for line in data:
+                if "removed lines covered by micro-change: " in line:
+                    microchange_deleted += int(line.split("removed lines covered by micro-change: ")[1])
+                if "added lines covered by micro-change: " in line:
+                    microchange_added += int(line.split("added lines covered by micro-change: ")[1])
+                if "total tree removed lines: " in line:
+                    if_deleted += int(line.split("total tree removed lines: ")[1])
+                if "total tree added lines: " in line:
+                    if_added += int(line.split("total tree added lines: ")[1])
+            res[p.stem] = (microchange_deleted+microchange_added)/(if_added+if_deleted)
+    print(res)
+
 if __name__ == "__main__":
-    commit_num = {"android-demos":368, "javapoet":919,"mbassador":342,"jfinal":517}
+    commit_num = {"android-demos":368, "javapoet":919,"mbassador":342,"jfinal":517, "retrolambda":530, "seyren":640,"truth":1909,"zuul":1599}
     lines = {
         "android-demos":{"added":414,"removed":526}, 
         "javapoet":{"added":4618,"removed":5127}, 
         "mbassador":{"added":2580,"removed":2334}, 
-        "jfinal":{"added":8707,"removed":8063}}
+        "jfinal":{"added":8707,"removed":8063},
+        "retrolambda":{"added":2565,"removed":2441},
+        "seyren":{"added":3317,"removed":3065},
+        "truth":{"added":31438,"removed":30725},
+        "zuul":{"added":12886,"removed":11907}
+        }
 
     data_from_log = load_logs()
     aggregated_data = aggregate_data(data_from_log, commit_num, lines)
 
     build_csv(aggregated_data,"test.csv")
+    calculate_microchange_line_coverage()
