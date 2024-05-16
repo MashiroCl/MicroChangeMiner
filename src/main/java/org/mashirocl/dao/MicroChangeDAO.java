@@ -1,15 +1,13 @@
 package org.mashirocl.dao;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.mashirocl.microchange.MicroChangeFileSpecified;
 import org.mashirocl.refactoringminer.SideLocation;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author mashirocl@gmail.com
@@ -19,6 +17,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@ToString
 public class MicroChangeDAO {
     @JsonProperty("type")
     private String type;
@@ -46,5 +45,18 @@ public class MicroChangeDAO {
         this.rightSideLocations = new LinkedList<>();
         leftSideLocations.forEach(p->this.leftSideLocations.add(new SideLocationDAO(p)));
         rightSideLocations.forEach(p->this.rightSideLocations.add(new SideLocationDAO(p)));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MicroChangeDAO microChangeDAO = (MicroChangeDAO) o;
+        return Objects.equals(toString(), microChangeDAO.toString());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(toString());
     }
 }
