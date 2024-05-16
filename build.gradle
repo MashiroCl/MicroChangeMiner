@@ -58,3 +58,18 @@ jar {
         attributes "Multi-Release": "true"
     }
 }
+
+task runCollectorMain(type: JavaExec) {
+    description = 'Runs the main method in Collector.java'
+    classpath = sourceSets.main.runtimeClasspath
+
+    // Set the main class
+    main = 'org.mashirocl.visualize.Collector'
+
+    // Arguments to pass to the main method
+    args = [
+            // Add your arguments here if needed
+    ]
+}
+// Define dependencies for the task
+runCollectorMain.dependsOn compileJava
