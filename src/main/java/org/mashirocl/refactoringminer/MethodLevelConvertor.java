@@ -217,6 +217,40 @@ public class MethodLevelConvertor {
         return res;
     }
 
+    public void convertMethodLevelActionToFileLevel(String methodLevelCommit, String methodLevelGitPath,  List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations){
+        String methodLevelRepoPath = Path.of(methodLevelGitPath).getParent().toString();
+
+        // left side
+        for(SideLocation sideLocation: leftSideLocations){
+            Path methodLevelfilePath = sideLocation.getPath();
+            String methodLevelFileName = "\""+methodLevelfilePath.getFileName().toString()+"\"";
+            Map<String, Range> parentCommitmap =  getMethodLevelMappingFile(
+                    new File(methodLevelRepoPath),
+                    new File(convertMethodLevelFileToMapFile(methodLevelfilePath.toString())),
+                    getParentCommit(new File(methodLevelGitPath), methodLevelCommit));
+            if(parentCommitmap.isEmpty()){
+                log.error("Failed to find the mapping file using command: git show {}:{}", getParentCommit(new File(methodLevelGitPath), methodLevelCommit), convertMethodLevelFileToMapFile(methodLevelfilePath.toString()));
+            }else{
+                sideLocation.setRange(convertMethodLevelLineNumberToFileLevel(sideLocation.getRange(), parentCommitmap.get(methodLevelFileName)));
+            }
+        }
+
+        // right side
+        for(SideLocation sideLocation: rightSideLocations){
+            Path methodLevelfilePath = sideLocation.getPath();
+            String methodLevelFileName = "\""+methodLevelfilePath.getFileName().toString()+"\"";
+            Map<String, Range> commitmap =  getMethodLevelMappingFile(
+                    new File(methodLevelRepoPath),
+                    new File(convertMethodLevelFileToMapFile(methodLevelfilePath.toString())),
+                    methodLevelCommit);
+            if(commitmap.isEmpty()){
+                log.error("Failed to find the mapping file using command: git show {}:{}", methodLevelCommit, convertMethodLevelFileToMapFile(methodLevelfilePath.toString()));
+            }else{
+                sideLocation.setRange(convertMethodLevelLineNumberToFileLevel(sideLocation.getRange(), commitmap.get(methodLevelFileName)));
+            }
+        }
+    }
+
 
     public void covertMethodLevelMicroChangeToFileLevel(String methodLevelCommit, String methodLevelGitPath, MicroChangeFileSpecified microChangeFileSpecified){
         String methodLevelRepoPath = Path.of(methodLevelGitPath).getParent().toString();
@@ -295,6 +329,12 @@ public class MethodLevelConvertor {
         String fileName = Path.of(path).getFileName().toString();
         String className = fileName.substring(0, Math.min(fileName.indexOf("#"), fileName.indexOf(".")));
         return Path.of(path).resolveSibling(className)+".mapping";
+    }
+
+    public static String convertMethodLevelFileToFileLevelFile(String path){
+        String fileName = Path.of(path).getFileName().toString();
+        String className = fileName.substring(0, Math.min(fileName.indexOf("#"), fileName.indexOf(".")));
+        return Path.of(path).resolveSibling(className)+".java";
     }
 
     public static void main(String[] args) {

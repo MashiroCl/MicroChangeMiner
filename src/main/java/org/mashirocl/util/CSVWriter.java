@@ -54,6 +54,21 @@ public class CSVWriter {
         }
     }
 
+    public static List<CommitDAO> readCommitDAOsFromJson(String jsonPath){
+        log.info("Reading from {}", jsonPath);
+        List<CommitDAO> commitDAOs = null;
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            commitDAOs = objectMapper.readValue(
+                    new File(jsonPath),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, CommitDAO.class));
+        }
+        catch (IOException e){
+            log.error(e.getMessage(), e);
+        }
+        return commitDAOs;
+    }
+
     public static void writeCommit2CSV(String inputPath, String outputPath){
         log.info("read from {} and write to {}", inputPath, outputPath);
         try( com.opencsv.CSVWriter csvWriter = new com.opencsv.CSVWriter(new FileWriter(outputPath))){
