@@ -15,7 +15,7 @@ import java.util.Map;
  * @since 2024/02/02 15:17
  */
 @Slf4j
-public class ChangeBoundaryCondition implements MicroChangePattern{
+public class AdjustConditionBoundary implements MicroChangePattern{
     /**
      * condition:
      * for one action in the edit script

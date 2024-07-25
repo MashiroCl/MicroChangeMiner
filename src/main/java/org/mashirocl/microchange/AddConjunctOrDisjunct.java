@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 import org.mashirocl.microchange.common.NodePosition;
-import org.w3c.dom.Node;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +15,7 @@ import java.util.Map;
  * @since 2024/03/03 11:18
  */
 @Slf4j
-public class AddAdditionalCondition implements MicroChangePattern{
+public class AddConjunctOrDisjunct implements MicroChangePattern{
 
     // is insert a &&/|| to a if statement condition expression
     @Override

@@ -16,7 +16,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/03/20 13:39
  */
-public class LowerCondition implements MicroChangePattern{
+public class MoveOutwardCondition implements MicroChangePattern{
 
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {

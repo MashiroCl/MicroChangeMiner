@@ -17,7 +17,7 @@ import java.util.Map;
  * @since 2024/01/26 9:26
  */
 @Slf4j
-public class LiftCondition implements MicroChangePattern{
+public class MoveInwardCondition implements MicroChangePattern{
     /**
      * 1. is `move-tree`
      * 2. it is moving from a nested conditional-expression

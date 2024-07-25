@@ -3,12 +3,10 @@ package org.mashirocl.microchange;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.Tree;
-import com.google.common.collect.Range;
 import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,7 +15,7 @@ import java.util.Map;
  * @since 2024/01/23 21:51
  */
 @Slf4j
-public class ReverseConditional implements MicroChangePattern{
+public class ReverseCondition implements MicroChangePattern{
 
     public float matchConditionGumTreeCL(Action action,  Map<Tree, Tree> mappings){
         float confidenceLevel = 0.0f;

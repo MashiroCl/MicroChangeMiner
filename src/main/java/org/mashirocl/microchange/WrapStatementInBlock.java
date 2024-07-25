@@ -5,7 +5,6 @@ import com.github.gumtreediff.tree.Tree;
 import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
-import org.mashirocl.microchange.common.NodePosition;
 
 import java.util.List;
 import java.util.Map;
@@ -16,21 +15,9 @@ import java.util.Map;
  */
 
 @Slf4j
-public class AddCurlyBrace implements MicroChangePattern{
+public class WrapStatementInBlock implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-//        log.info("action is :{}",action);
-//        log.info("action.getName(): {}", action.getName());
-//        log.info("action.getNode(): {}", action.getNode());
-//        log.info("aciton.getNode().getChild(0): {}",action.getNode().getChild(0));
-//        log.info("action.getNode().getParent(): {}", action.getNode().getParent());
-//        log.info("action.getNode().getChildren(): {}", action.getNode().getChildren().size());
-//        if(mappings.containsKey(action.getNode().getParent())){
-//            log.info("mappings.get(action.getNode().getParent()).getChild(0): {}", mappings.get(action.getNode().getParent()).getChild(0));
-//            log.info("mappings.get(action.getNode().getParent()).getChild(1): {}", mappings.get(action.getNode().getParent()).getChild(1));
-//            log.info("mappings.get(action.getNode().getParent()).getChild(1).isIsomorphicTo(action.getNode().getChild(0)): {}", mappings.get(action.getNode().getParent()).getChild(1).isIsomorphicTo(action.getNode().getChild(0)));
-//        }
-
         return action.getName().equals("insert-node")
                 && action.getNode().toString().contains("Block")
                 && action.getNode().getChildren().size() == 1

@@ -14,36 +14,18 @@ import java.util.Map;
  * @since 2024/03/15 12:28
  */
 @Slf4j
-public class RemoveCurlyBrace implements MicroChangePattern{
+public class UnwrapStatementFromBlock implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-//      log.info("action {}", action);
-//      log.info("action.getName {}", action.getName().equals("move-tree"));
-//      log.info("action.getNode().getParent() {}", action.getNode().getParent());
-//      log.info("action.getNode().getParent().getChildren().size() {}", action.getNode().getParent().getChildren().size());
-//
-//        if(mappings.containsKey(action.getNode())){
-//          log.info("mappings.get(action).getParent(): {}", mappings.get(action.getNode()).getParent());
-//          log.info("mappings.get(action.getNode()).getParent().getType(): {}", mappings.get(action.getNode()).getParent().getType());
-//          log.info("action.getNode().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(1)) {}",
-//                  action.getNode().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(1)));
-//      }
-
         if(action.getName().equals("move-tree")
                 && action.getNode().getParent().toString().contains("Block")
-                && action.getNode().getParent().getParent().getType().toString().equals("IfStatement") // ?
+                && action.getNode().getParent().getParent().getType().toString().equals("IfStatement")
                 && action.getNode().getParent().getChildren().size()==1
                 && mappings.containsKey(action.getNode())
                 && mappings.get(action.getNode()).getParent().getType().toString().equals("IfStatement")
                 && action.getNode().getParent().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(0))
                 && action.getNode().getParent().getChild(0).isIsomorphicTo(mappings.get(action.getNode()).getParent().getChild(1)))
             return true;
-
-//        if(mappings.containsKey(action.getNode().getParent())){
-//            log.info("here");
-//            log.info("mappings.get(action.getNode().getParent()).getChild(1) {}", mappings.get(action.getNode().getParent()).getChild(1));
-//            log.info("action.getNode().getChild(0) {}", action.getNode().getChild(0));
-//        }
 
         if(action.getName().equals("move-tree")
                 && action.getNode().toString().contains("Block")

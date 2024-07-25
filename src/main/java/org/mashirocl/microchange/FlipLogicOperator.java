@@ -16,7 +16,7 @@ import java.util.Map;
  * @since 2024/03/25 15:05
  */
 @Slf4j
-public class ChangeLogicOperator implements MicroChangePattern{
+public class FlipLogicOperator implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
         return false;

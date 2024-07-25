@@ -18,7 +18,7 @@ import java.util.Map;
  */
 
 @Slf4j
-public class ExtractFromCondition implements MicroChangePattern{
+public class UnwrapStatementFromConditional implements MicroChangePattern{
     /**
      * is `move-tree`
      * action.getnode() is in the then/else part of a if-statement

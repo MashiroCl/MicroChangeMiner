@@ -12,7 +12,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/02/27 11:01
  */
-public class RemoveConditionBlock implements MicroChangePattern{
+public class RemoveConditionalStatement implements MicroChangePattern{
     /**
      * The if-block is totally removed: e.g. https://github.com/bennidi/mbassador/commit/687fbb72ed2f716332e4ff08229b8566e31d4f91#diff-0ad7c0256f9c36005dd4f9e162e91a593bc5875072d38d5f23f85fb1d7dc7fc3L129
      * condition:

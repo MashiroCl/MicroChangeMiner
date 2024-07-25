@@ -3,11 +3,9 @@ package org.mashirocl.microchange;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.tree.Tree;
-import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +13,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/01/10 9:18
  */
-public class ReverseThenElse implements MicroChangePattern {
+public class SwapThenAndElse implements MicroChangePattern {
 
     /**
      * condition:

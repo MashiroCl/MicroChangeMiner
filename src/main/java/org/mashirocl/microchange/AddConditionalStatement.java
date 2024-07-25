@@ -12,7 +12,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/02/27 11:10
  */
-public class InsertConditionBlock implements MicroChangePattern{
+public class AddConditionalStatement implements MicroChangePattern{
     /**
      * The if-block is purely added: e.g. https://github.com/bennidi/mbassador/commit/d6aa291b8662849033a1d8ec0772babd6e3ef166#diff-38069dbc75fc0de230b3daec833ab771c1461df4ebabffe06411e75d828b846fR48
      * condition:

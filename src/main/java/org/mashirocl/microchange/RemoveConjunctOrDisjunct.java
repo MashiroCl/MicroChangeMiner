@@ -15,7 +15,7 @@ import java.util.Map;
  * @since 2024/03/03 14:46
  */
 @Slf4j
-public class SimplifyConditional implements MicroChangePattern{
+public class RemoveConjunctOrDisjunct implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
 //        return action.getName().equals("delete-node")
