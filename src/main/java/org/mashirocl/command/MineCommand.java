@@ -72,26 +72,26 @@ public class MineCommand implements Callable<Integer> {
 
 
     public static void loadMicroChanges(PatternMatcher patternMatcherGumTree) {
-        patternMatcherGumTree.addMicroChange(new AddAdditionalCondition());
-        patternMatcherGumTree.addMicroChange(new AddCurlyBrace());
-        patternMatcherGumTree.addMicroChange(new ChangeBoundaryCondition());
+        patternMatcherGumTree.addMicroChange(new AddConjunctOrDisjunct());
+        patternMatcherGumTree.addMicroChange(new WrapStatementInBlock());
+        patternMatcherGumTree.addMicroChange(new AdjustConditionBoundary());
         patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
         patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
-        patternMatcherGumTree.addMicroChange(new ConditionalToTernaryOperator());
-        patternMatcherGumTree.addMicroChange(new EncapsulateInCondition());
+        patternMatcherGumTree.addMicroChange(new ConditionalToExpression());
+        patternMatcherGumTree.addMicroChange(new WrapStatementInConditional());
         patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
         patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
-        patternMatcherGumTree.addMicroChange(new ExtractFromCondition());
-        patternMatcherGumTree.addMicroChange(new InsertConditionBlock());
-        patternMatcherGumTree.addMicroChange(new LiftCondition());
-        patternMatcherGumTree.addMicroChange(new LowerCondition());
-        patternMatcherGumTree.addMicroChange(new RemoveConditionBlock());
-        patternMatcherGumTree.addMicroChange(new RemoveCurlyBrace());
+        patternMatcherGumTree.addMicroChange(new UnwrapStatementFromConditional());
+        patternMatcherGumTree.addMicroChange(new AddConditionalStatement());
+        patternMatcherGumTree.addMicroChange(new MoveInwardCondition());
+        patternMatcherGumTree.addMicroChange(new MoveOutwardCondition());
+        patternMatcherGumTree.addMicroChange(new RemoveConditionalStatement());
+        patternMatcherGumTree.addMicroChange(new UnwrapStatementFromBlock());
         patternMatcherGumTree.addMicroChange(new RemoveElse());
-        patternMatcherGumTree.addMicroChange(new ReverseThenElse());
-        patternMatcherGumTree.addMicroChange(new ReverseConditional());
-        patternMatcherGumTree.addMicroChange(new SimplifyConditional());
-        patternMatcherGumTree.addMicroChange(new ChangeLogicOperator());
+        patternMatcherGumTree.addMicroChange(new SwapThenAndElse());
+        patternMatcherGumTree.addMicroChange(new ReverseCondition());
+        patternMatcherGumTree.addMicroChange(new RemoveConjunctOrDisjunct());
+        patternMatcherGumTree.addMicroChange(new FlipLogicOperator());
         log.info("{}",patternMatcherGumTree.listLoadedMicroChanges());
 //        patternMatcherGumTree.addMicroChange(new UnifyCondition());
 
@@ -246,7 +246,6 @@ public class MineCommand implements Callable<Integer> {
                 mrADChangeCoveredLines[1]+=coveredLength(microChangeUnionRefRange.getDstRange());
 
                 // Not covered
-                // TODO debug here
                 URL link = new URL(LinkAttacher.searchLink(repositoryName));
                 SrcDstRange shouldCoveredRange = ActionStatus.getIntersection(treeActionPerFile, srcDstLineRangeOfIf);
                 RangeSet<Integer> srcNotCovered = notCoveredRange(shouldCoveredRange.getSrcRange(), microChangeUnionRefRange.getSrcRange());
