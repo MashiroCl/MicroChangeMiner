@@ -45,5 +45,5 @@ $ java -jar  build/libs/miner-1.0-SNAPSHOT-all.jar mine <method_level_repo_path>
 ```
 e.g. for repository `mbassador`
 ```shell
-$ java -jar  build/libs/miner-1.0-SNAPSHOT-all.jar mine ./method_level/mbassador/.git ./mined/mbassador.json --csv ./mined/mbassador.csv --map ./commitMap/mbassador.json --refactoring ./minedRefactoring/mbassador --original ./OSS/mbassador/.git --notCoveredPath ./notCovered/mbassador.json >runLog/mbassador.log 2>&1 & 
+$ java -jar  build/libs/miner-1.0-SNAPSHOT-all.jar mine ./method_level/mbassador/.git ./mined/mbassador.json --csv ./mined/mbassador.csv --map ./commitMap/mbassador.json --refactoring ./minedRefactoring/mbassador --original ./OSS/mbassador/.git --notCoveredPath ./notCovered/mbassador.json >runLog/mbassador.log
 ```
