@@ -22,13 +22,6 @@ public class TextualDiff {
 
     public static Differencer<String> myers = new JGitDifferencer.Myers<>();
 
-    public static void main(String[] args) {
-        final RepositoryAccess ra = new RepositoryAccess(Path.of("/Users/leichen/data/parsable_method_level/my-refactoring-toy-example/.git"));
-        final DiffFormatter diffFormatter = new DiffFormatter(System.out);
-        diffFormatter.setRepository(ra.getRepository());
-        System.out.println(getTextualDiff(ra, diffFormatter));
-    }
-
     public static Map<String,  Map<String, SrcDstRange>> getTextualDiff(RepositoryAccess ra, DiffFormatter diffFormatter) {
         // commit: file: SrcDstRange
         log.info("Computing textual diff...");

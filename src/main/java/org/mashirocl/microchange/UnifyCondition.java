@@ -15,6 +15,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2024/01/25 14:16
  */
+//TODO debug: if(b || c==2){ -> if(c==2){ will be misidentified as UnifyCondition; move part of the original conditional expression may lead to this
 public class UnifyCondition implements MicroChangePattern{
     /**
      * is `move-tree`
