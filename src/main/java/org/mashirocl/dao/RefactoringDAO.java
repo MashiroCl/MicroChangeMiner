@@ -2,9 +2,7 @@ package org.mashirocl.dao;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
-import org.eclipse.jgit.diff.DiffEntry;
 import org.mashirocl.refactoringminer.Refactoring;
-import org.mashirocl.refactoringminer.SideLocation;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -31,7 +29,7 @@ public class RefactoringDAO {
     private String description;
 
     public RefactoringDAO(Refactoring refactoring){
-        type = refactoring.getType();
+        type = refactoring.getType().replace("\"","");
         description = refactoring.getDescription();
         leftSideLocations = new LinkedList<>();
         rightSideLocations = new LinkedList<>();
