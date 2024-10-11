@@ -9,7 +9,7 @@ import java.util.concurrent.Callable;
  * @since 2024/01/17 22:42
  */
 
-@Command(sortOptions = false, subcommands = {MineCommand.class, CommitMapCommand.class, RefactoringCommand.class})
+@Command(sortOptions = false, subcommands = {MineCommand.class, CommitMapCommand.class, RefactoringCommand.class, VisualizeCommand.class})
 public class AppCommand implements Callable<Integer> {
 
     @Override

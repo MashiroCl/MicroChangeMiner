@@ -32,7 +32,7 @@ public class SideLocationDAO {
     }
 
     public SideLocationDAO(SideLocation sideLocation){
-        filePath = sideLocation.getPath().toString();
+        filePath = sideLocation.getPath().toString().replace("\"","");
         startLine = sideLocation.getRange().lowerEndpoint();
         endLine = sideLocation.getRange().upperEndpoint();
     }

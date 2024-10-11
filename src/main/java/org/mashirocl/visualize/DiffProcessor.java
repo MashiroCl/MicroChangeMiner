@@ -29,9 +29,9 @@ import org.mashirocl.textualdiff.Differencer;
 import org.mashirocl.textualdiff.JGitDifferencer;
 import org.mashirocl.util.CommitMapper;
 import org.mashirocl.util.RepositoryAccess;
+import org.mashirocl.utildiff.UtilDiff;
+import org.mashirocl.utildiff.UtilDiffResult;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -70,7 +70,6 @@ public class DiffProcessor {
             }
         }
 
-//        resetRepositoryAccess(methodLevelGitPath);
         return treeDiffs;
     }
 
@@ -102,7 +101,6 @@ public class DiffProcessor {
         }
 
         log.info("finished");
-//        resetRepositoryAccess(methodLevelGitPath);
         return textualDiffs;
     }
 
@@ -128,6 +126,60 @@ public class DiffProcessor {
 
         log.info("finished");
         return textualDiffs;
+    }
+
+    /**
+     * change the data structure to make it accept different types of
+     * @param repositoryAccess
+     * @return
+     */
+    public Map<String, DiffRange> getUtilDiff(final RepositoryAccess repositoryAccess) {
+        log.info("Obtaining file-level util diff...");
+        DiffRange addition = new DiffRange();
+        DiffRange removal = new DiffRange();
+        DiffRange modification = new DiffRange();
+
+        Iterable<RevCommit> commits = getCommits(repositoryAccess);
+
+        for (RevCommit commit : commits) {
+//            log.info(commit.getId().name());
+            List<DiffEntry> diffEntries = filterDiffEntries(commit);
+            if (diffEntries.isEmpty()) continue;
+
+            List<SideLocation> removedLeftSideLocations = new LinkedList<>();
+            List<SideLocation> addedRightSideLocations = new LinkedList<>();
+            List<SideLocation> modifiedLeftSideLocations = new LinkedList<>();
+            List<SideLocation> modifiedRightSideLocations = new LinkedList<>();
+
+            List<UtilDiffResult> utilDiffResults = processUtilDiff(repositoryAccess, diffEntries, commit);
+
+            if (!utilDiffResults.isEmpty()) {
+                for(UtilDiffResult utilDiffResult:utilDiffResults){
+                    for(Path p:utilDiffResult.getAdded().keySet()){
+                        utilDiffResult.getAdded().get(p).forEach(i -> addedRightSideLocations.add(new SideLocation(p.toString(),i)));
+                    }
+                    for(Path p:utilDiffResult.getRemoved().keySet()){
+                        utilDiffResult.getRemoved().get(p).forEach(i -> removedLeftSideLocations.add(new SideLocation(p.toString(),i)));
+                    }
+                    for(Path p:utilDiffResult.getModifiedLeft().keySet()){
+                        utilDiffResult.getModifiedLeft().get(p).forEach(i -> modifiedLeftSideLocations.add(new SideLocation(p.toString(),i)));
+                    }
+                    for(Path p:utilDiffResult.getModifiedRight().keySet()){
+                        utilDiffResult.getModifiedRight().get(p).forEach(i -> modifiedRightSideLocations.add(new SideLocation(p.toString(),i)));
+                    }
+                }
+                addition.getDiff().put(commit.getId().name(), new PairSideLocation(new LinkedList<>(), addedRightSideLocations));
+                removal.getDiff().put(commit.getId().name(), new PairSideLocation(removedLeftSideLocations, new LinkedList<>()));
+                modification.getDiff().put(commit.getId().name(), new PairSideLocation(modifiedLeftSideLocations, modifiedRightSideLocations));
+            }
+        }
+
+        Map<String, DiffRange> result = new HashMap<>();
+        result.put("addition", addition);
+        result.put("removal", removal);
+        result.put("modification", modification);
+        log.info("finished");
+        return result;
     }
 
     public Map<String, Map<String, Map<String,String>>> getSource(final String fileLevelGit) {
@@ -190,13 +242,16 @@ public class DiffProcessor {
     }
 
     private void processDiffs(RepositoryAccess repositoryAccess, List<DiffEntry> diffEntries, RevCommit commit, List<SideLocation> leftSideLocations, List<SideLocation> rightSideLocations, String type) {
-        if(type.equals("TreeDiff")){
-            for (DiffEntry diffEntry : diffEntries) {
-                processTreeDiffEntry(repositoryAccess, diffEntry, commit, leftSideLocations, rightSideLocations);
+        switch (type) {
+            case "TreeDiff" -> {
+                for (DiffEntry diffEntry : diffEntries) {
+                    processTreeDiffEntry(repositoryAccess, diffEntry, commit, leftSideLocations, rightSideLocations);
+                }
             }
-        } else if (type.equals("TextualDiff")) {
-            for (DiffEntry diffEntry : diffEntries) {
-                processTextualDiffEntry(repositoryAccess, diffEntry, commit, leftSideLocations, rightSideLocations);
+            case "TextualDiff" -> {
+                for (DiffEntry diffEntry : diffEntries) {
+                    processTextualDiffEntry(repositoryAccess, diffEntry, commit, leftSideLocations, rightSideLocations);
+                }
             }
         }
 
@@ -248,6 +303,35 @@ public class DiffProcessor {
         srcDstRange.getSrcRange().asRanges().forEach(p->leftSideLocations.add(new SideLocation(oldPath, p)));
         srcDstRange.getDstRange().asRanges().forEach(p->rightSideLocations.add(new SideLocation(newPath, p)));
     }
+
+
+    /**
+     * use the 3rd-party package java-diff-utils to identify
+     * which parts of the code were added, removed, or modified
+     *
+     */
+    private List<UtilDiffResult> processUtilDiff(RepositoryAccess repositoryAccess, List<DiffEntry> diffEntries, RevCommit commit){
+        List<UtilDiffResult> utilDiffResults = new LinkedList<>();
+        for(DiffEntry diffEntry: diffEntries){
+            String oldPath = diffEntry.getOldPath();
+            String newPath = diffEntry.getNewPath();
+            RevTree newTree = commit.getTree();
+            RevTree oldTree = commit.getParent(0).getTree();
+
+            FileSource oldFile = FileSource.of(oldPath, oldTree, repositoryAccess.getRepository());
+            FileSource newFile = FileSource.of(newPath, newTree, repositoryAccess.getRepository());
+
+            UtilDiff utilDiff = new UtilDiff();
+            UtilDiffResult utilDiffResult = new UtilDiffResult(
+                    utilDiff.calcFileDiffLocation(oldFile.getSource(), newFile.getSource()),Path.of(oldPath), Path.of(newPath));
+            utilDiffResults.add(utilDiffResult);
+        }
+        return utilDiffResults;
+
+    }
+
+
+
     private Iterable<RevCommit> getCommits(RepositoryAccess repositoryAccess) {
         return repositoryAccess.walk(null, "HEAD");
     }

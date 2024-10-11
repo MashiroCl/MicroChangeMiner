@@ -35,12 +35,16 @@ public class RepositoryAccess implements AutoCloseable {
     @Getter
     private ObjectReader readerCache;
 
+    @Getter
+    private Path path;
+
     public RepositoryAccess(final Repository repository) {
         this.repository = repository;
         repository.incrementOpen();
     }
 
     public RepositoryAccess(final Path path) {
+        this.path = path;
         this.repository =  createRepository(path);
     }
 

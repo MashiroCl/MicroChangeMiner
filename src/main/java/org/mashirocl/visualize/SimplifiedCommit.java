@@ -1,6 +1,8 @@
 package org.mashirocl.visualize;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.dao.MicroChangeDAO;
@@ -33,10 +35,10 @@ public class SimplifiedCommit {
     private Map<String, String> preChangeSourceCode;
     @JsonProperty("postChangeSourceCode")
     private Map<String, String> postChangeSourceCode;
-    @JsonProperty("preTexturalChangeRange")
-    private Map<String, List<List<Integer>>> preTexturalChangeRange;
-    @JsonProperty("postTexturalChangeRange")
-    private Map<String, List<List<Integer>>> postTexturalChangeRange;
+    @JsonProperty("preTextualChangeRange")
+    private Map<String, List<List<Integer>>> preTextualChangeRange;
+    @JsonProperty("postTextualChangeRange")
+    private Map<String, List<List<Integer>>> postTextualChangeRange;
     @JsonProperty("preChangeRange")
     private Map<String, List<List<Integer>>> preChangeRange;
     @JsonProperty("postChangeRange")
@@ -57,36 +59,21 @@ public class SimplifiedCommit {
         this.preChangeSourceCode = commit.getPreChangeSourceCode();
         this.postChangeSourceCode = commit.getPostChangeSourceCode();
         buildChangeRangeMap(commit);
-        log.info("commit.getFullChangeRanges() {}", commit.getFullChangeRanges());
         buildTextualChangeRangeMap(commit);
-//        for(String filePath:commit.getChangeRanges().getLeftSide().keySet()){
-//            String fileLevelFilePath = MethodLevelConvertor.convertMethodLevelFileToFileLevelFile(filePath);
-//            if(!this.preChangeRange.containsKey(fileLevelFilePath)){
-//                this.preChangeRange.put(fileLevelFilePath, new LinkedList<>());
-//            }
-//            this.preChangeRange.get(fileLevelFilePath).addAll(commit.getChangeRanges().getLeftSide().get(filePath).asRanges().stream()
-//                    .map(r->List.of(r.lowerEndpoint(),r.upperEndpoint())).toList());
-//        }
-//        for(String filePath:commit.getChangeRanges().getRightSide().keySet()){
-//            String fileLevelFilePath = MethodLevelConvertor.convertMethodLevelFileToFileLevelFile(filePath);
-//            if(!this.postChangeRange.containsKey(fileLevelFilePath)){
-//                this.postChangeRange.put(fileLevelFilePath, new LinkedList<>());
-//            }
-//            this.postChangeRange.get(fileLevelFilePath).addAll(commit.getChangeRanges().getRightSide().get(filePath).asRanges().stream()
-//                    .map(r->List.of(r.lowerEndpoint(),r.upperEndpoint())).toList());
-//        }
         this.microChanges = new LinkedList<>();
         commit.getMicroChanges().forEach(p->this.microChanges.add(new SpecialChange(p)));
         this.microChanges.forEach(SpecialChange::convertMethodLevelToFileLevel);
         this.refactorings = new LinkedList<>();
         commit.getRefactorings().forEach(p->this.refactorings.add(new SpecialChange(p)));
-        this.refactorings.forEach(SpecialChange::convertMethodLevelToFileLevel);
+        // 2024.6.10 use refactorings detected from file-level
+//        this.refactorings.forEach(SpecialChange::convertMethodLevelToFileLevel);
     }
 
 
     private void buildChangeRangeMap(Commit commit){
         this.preChangeRange = new HashMap<>();
         this.postChangeRange = new HashMap<>();
+        if(commit.getChangeRanges().getLeftSide()==null && commit.getChangeRanges().getRightSide()==null) return;
         for(String filePath:commit.getChangeRanges().getLeftSide().keySet()){
             String fileLevelFilePath = MethodLevelConvertor.convertMethodLevelFileToFileLevelFile(filePath);
             if(!this.preChangeRange.containsKey(fileLevelFilePath)){
@@ -106,23 +93,38 @@ public class SimplifiedCommit {
     }
 
     private void buildTextualChangeRangeMap(Commit commit){
-        this.preTexturalChangeRange = new HashMap<>();
-        this.postTexturalChangeRange = new HashMap<>();
+        this.preTextualChangeRange = new HashMap<>();
+        this.postTextualChangeRange = new HashMap<>();
+        if(commit.getFullChangeRanges().getLeftSide()==null && commit.getFullChangeRanges().getRightSide()==null) return;
         for(String filePath:commit.getFullChangeRanges().getLeftSide().keySet()){
-            if(!this.preTexturalChangeRange.containsKey(filePath)){
-                this.preTexturalChangeRange.put(filePath, new LinkedList<>());
+            if(!this.preTextualChangeRange.containsKey(filePath)){
+                this.preTextualChangeRange.put(filePath, new LinkedList<>());
             }
-            this.preTexturalChangeRange.get(filePath).addAll(commit.getFullChangeRanges().getLeftSide().get(filePath).asRanges().stream()
-                    .map(r->List.of(r.lowerEndpoint(),r.upperEndpoint())).toList());
+            this.preTextualChangeRange.get(filePath).addAll(commit.getFullChangeRanges().getLeftSide().get(filePath).asRanges().stream()
+                    .map(this::convertRangeToList).toList());
         }
         for(String filePath:commit.getFullChangeRanges().getRightSide().keySet()){
-            if(!this.postTexturalChangeRange.containsKey(filePath)){
-                this.postTexturalChangeRange.put(filePath, new LinkedList<>());
+            if(!this.postTextualChangeRange.containsKey(filePath)){
+                this.postTextualChangeRange.put(filePath, new LinkedList<>());
             }
 
-            this.postTexturalChangeRange.get(filePath).addAll(commit.getFullChangeRanges().getRightSide().get(filePath).asRanges().stream()
-                    .map(r->List.of(r.lowerEndpoint(),r.upperEndpoint())).toList());
+            this.postTextualChangeRange.get(filePath).addAll(commit.getFullChangeRanges().getRightSide().get(filePath).asRanges().stream()
+                    .map(this::convertRangeToList).toList());
         }
+    }
+
+    List<Integer> convertRangeToList(Range<Integer> r){
+        int lowerEndpoint = r.lowerEndpoint();
+        int upperEndpoint = r.upperEndpoint();
+        if (r.lowerBoundType() == BoundType.OPEN) {
+            lowerEndpoint++;
+        }
+        if (r.upperBoundType() == BoundType.CLOSED) {
+        } else {
+            // Upper endpoint is exclusive
+            upperEndpoint--;
+        }
+        return List.of(lowerEndpoint, upperEndpoint);
     }
 }
 

@@ -31,4 +31,9 @@ public class SideLocation{
         this.range = range;
     }
 
+    public SideLocation(String path, Integer i){
+        this.path = Path.of(path);
+        this.range = Range.closed(i,i);
+    }
+
 }
