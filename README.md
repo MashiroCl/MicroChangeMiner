@@ -90,3 +90,19 @@ public class YourMicroChange implements MicroChangePattern{
     }
 ```
 
+## Publications
+(Formal doi to be added)
+
+The following article includes the details of the micro-changes and the miner.
+We encourage contributions to the micro-changes or the miner.
+
+Lei Chen, Michele Lanza, Shinpei Hayashi: [''Understanding Code Change with Micro-Changes'']( https://www.arxiv.org/abs/2409.09923). In Proceedings of the 40th IEEE International Conference on Software Maintenance and Evolution (ICSME 2024). Flagstaff, AZ, USA, oct, 2024.
+```
+@article{chen2024understanding,
+  title={Understanding Code Change with Micro-Changes},
+  author={Chen, Lei and Lanza, Michele and Hayashi, Shinpei},
+  journal={arXiv preprint arXiv:2409.09923},
+  year={2024}
+}
+}
+```
