@@ -90,6 +90,9 @@ public class YourMicroChange implements MicroChangePattern{
     }
 ```
 
+## Complete Micro-Change Catalog
+You can refer to the complete catalog of micro-change in [Catalog](https://github.com/salab/Micro-Change-Catalog/).
+
 ## Publications
 (Formal doi to be added)
 
