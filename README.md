@@ -47,3 +47,46 @@ e.g. for repository `mbassador`
 ```shell
 $ java -jar  build/libs/miner-1.0-SNAPSHOT-all.jar mine ./method_level/mbassador/.git ./mined/mbassador.json --csv ./mined/mbassador.csv --map ./commitMap/mbassador.json --refactoring ./minedRefactoring/mbassador --original ./OSS/mbassador/.git --notCoveredPath ./notCovered/mbassador.json >runLog/mbassador.log
 ```
+
+
+## How to define your own micro-change types
+### 1. Implement the micro-change in package `org.mashirocl.microchange`
+```java
+public class YourMicroChange implements MicroChangePattern{
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
+      // Implement the match strategy here 
+      // if you need the actions for all, implement the same name method below
+        return false;
+    }
+
+    @Override
+    public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+      // Implement the match strategy here
+        return false;
+    }
+
+    @Override
+    public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
+        // get the line range of this micro-change
+        SrcDstRange srcDstRange = new SrcDstRange();
+        // left side range
+
+        // right side range
+
+        return srcDstRange;
+    }
+}
+
+```
+
+### 2. Declare your own micro-change if you want it to be mined in `org.mashirocl.command.MineCommand#loadMicroChanges()`
+```java
+    public static void loadMicroChanges(PatternMatcher patternMatcherGumTree) {
+        patternMatcherGumTree.addMicroChange(new AddConjunctOrDisjunct());
+        ...
+        patternMatcherGumTree.addMicroChange(new YourMicroChange());
+
+    }
+```
+
