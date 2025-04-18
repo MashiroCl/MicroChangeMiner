@@ -16,6 +16,7 @@ import org.mashirocl.match.ActionStatus;
 import org.mashirocl.match.PatternMatcher;
 import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.microchange.*;
+import org.mashirocl.microchange.loop.ConvertForToWhile;
 import org.mashirocl.refactoringminer.*;
 import org.mashirocl.textualdiff.TextualDiff;
 import org.mashirocl.util.CSVWriter;
@@ -27,6 +28,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
@@ -92,39 +94,109 @@ public class MineCommand implements Callable<Integer> {
         patternMatcherGumTree.addMicroChange(new ReverseCondition());
         patternMatcherGumTree.addMicroChange(new RemoveConjunctOrDisjunct());
         patternMatcherGumTree.addMicroChange(new FlipLogicOperator());
+        patternMatcherGumTree.addMicroChange(new ConvertForToWhile());
         log.info("{}",patternMatcherGumTree.listLoadedMicroChanges());
 //        patternMatcherGumTree.addMicroChange(new UnifyCondition());
 
     }
 
-    @Override
-    public Integer call() throws Exception {
+
+    private RepositoryAccess initRepository(){
         log.info("start mining...");
-        final RepositoryAccess ra = new RepositoryAccess(Path.of(config.methodLevelGitPath));
-        final String repositoryName = Path.of(config.methodLevelGitPath).getParent().getFileName().toString();
+        return new RepositoryAccess(Path.of(config.methodLevelGitPath));
+    }
 
-        final DiffFormatter diffFormatter = new DiffFormatter(System.out);
+    private Map<String, List<DiffEditScriptWithSource>> extractEditScripts(RepositoryAccess ra, DiffFormatter diffFormatter) throws IOException {
         diffFormatter.setRepository(ra.getRepository());
-
-        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScript(ra, diffFormatter);
+        Map<String, List<DiffEditScriptWithSource>> editScripts = EditScriptExtractor.getEditScript(ra, diffFormatter);
 //        Map<String, List<DiffEditScriptWithSource>> res = EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter, "25e1f38691be82100a0c017ba37b38eeba72b148");
-        log.info("Edit Script obtained for {} commits", res.size());
-        Map<String, Map<String, SrcDstRange>> textualDiff = TextualDiff.getTextualDiff(new RepositoryAccess(Path.of(config.methodLevelGitPath)), diffFormatter);
-        log.info("Textual Diff loaded");
+        log.info("Edit Script obtained for {} commits", editScripts.size());
+        return editScripts;
+    }
 
+    private Map<String, Map<String, SrcDstRange>> loadTextualDiff(String methodLevelGitPath, DiffFormatter diffFormatter) throws IOException {
+        Map<String, Map<String, SrcDstRange>> textualDiff = TextualDiff.getTextualDiff(new RepositoryAccess(Path.of(methodLevelGitPath)), diffFormatter);
+        log.info("Textual Diff loaded");
+        return textualDiff;
+    }
+
+    private CommitMapper createCommitMapper() {
         if (config.commitMap == null) {
             log.error("lack of commit map");
         }
-        CommitMapper commitMapper = new CommitMapper(config.commitMap);
+        return new CommitMapper(config.commitMap);
+    }
 
+
+    private Map<String, List<Refactoring>> loadRefactorings(CommitMapper commitMapper, MethodLevelConvertor methodLevelConvertor){
         log.info("Load refactorings");
-        MethodLevelConvertor methodLevelConvertor = new MethodLevelConvertor(commitMapper);
-        Map<String, List<Refactoring>> refMap = methodLevelConvertor.getMethodLevelRefactorings(config.refactoringPath, config.commitMap, config.methodLevelGitPath, config.originalRepoGitPath);
+        Map<String, List<Refactoring>> refMap = methodLevelConvertor.getMethodLevelRefactorings(
+                config.refactoringPath,
+                config.commitMap,
+                config.methodLevelGitPath,
+                config.originalRepoGitPath);
         log.info("Refactorings loaded");
         int refThreshold = 3;
         // exclude refactorings that across more than 3 lines (Extract related refs are excluded)
         RefactoringLoader.excludeRefactoringsAccordingToLineRanges(refMap, refThreshold);
         log.info("Excluded refactorings across more than {}", refThreshold);
+
+        return refMap;
+    }
+
+    private void writeResults(List<CommitDAO> commitDAOs, List<NotCoveredDAO> notCovered) throws IOException {
+        CSVWriter.writeCommit2Json(commitDAOs, config.outputJsonPath);
+        CSVWriter.writeCommit2CSV(config.outputJsonPath, config.outputCsvPath);
+
+        if (config.notCoveredPath == null) {
+            CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
+        } else {
+            CSVWriter.writeNotCoveredToJson(notCovered, config.notCoveredPath);
+        }
+    }
+
+    private void logSummaryStats(int[] totalADCodeChangeLines,
+                                 int[] microADChangeCoveredLines,
+                                 int[] mrADChangeCoveredLines,
+                                 int numberOfConditionalExpression,
+                                 int numberTotalConditionRelatedActionNumber,
+                                 int numberMicroChangeContainedConditionRelatedAction,
+                                 int numberOfFilesProcessed) {
+        logConditionalExpressionChangeContainedCommit(numberOfConditionalExpression);
+        logNumberOfFilesBeingProcessed(numberOfFilesProcessed);
+        logTreeDALines(totalADCodeChangeLines);
+        logMicroChangeCoveredDALines(microADChangeCoveredLines);
+        logMicroChangeCoverageRatio(microADChangeCoveredLines, totalADCodeChangeLines);
+        logMicroChangeWithRefCoveregeRatio(mrADChangeCoveredLines, totalADCodeChangeLines);
+        logActions(numberTotalConditionRelatedActionNumber, numberMicroChangeContainedConditionRelatedAction);
+    }
+
+
+    private Map<String, RenameRefactoring> extractRenameRefactorings(List<Refactoring> refactoringList) {
+        Map<String, RenameRefactoring> renamingMap = new HashMap<>();
+        for (Refactoring ref : refactoringList) {
+            if (ref instanceof RenameRefactoring) {
+                renamingMap.put(((RenameRefactoring) ref).getRename(), (RenameRefactoring) ref);
+            }
+        }
+        return renamingMap;
+    }
+
+
+    @Override
+    public Integer call() throws Exception {
+        final RepositoryAccess ra = initRepository();
+        final String repositoryName = Path.of(config.methodLevelGitPath).getParent().getFileName().toString();
+        final DiffFormatter diffFormatter = new DiffFormatter(System.out);
+        diffFormatter.setRepository(ra.getRepository());
+
+        Map<String, List<DiffEditScriptWithSource>> commitEditscriptMap = extractEditScripts(ra, diffFormatter);
+        Map<String, Map<String, SrcDstRange>> textualDiff = loadTextualDiff(config.methodLevelGitPath, diffFormatter);
+
+        CommitMapper commitMapper = createCommitMapper();
+
+        MethodLevelConvertor methodLevelConvertor = new MethodLevelConvertor(commitMapper);
+        Map<String, List<Refactoring>> refMap =loadRefactorings(commitMapper, methodLevelConvertor);
 
         PatternMatcher patternMatcherGumTree = new PatternMatcherGumTree();
         // load micro change types
@@ -136,7 +208,7 @@ public class MineCommand implements Callable<Integer> {
 
         int count = 0;
         int numberMicroChangeContainedConditionRelatedAction = 0, numberTotalConditionRelatedActionNumber = 0;
-        int total_count = res.keySet().size();
+        int total_count = commitEditscriptMap.keySet().size();
         int[] totalADCodeChangeLines = new int[]{0, 0};
         int[] microADChangeCoveredLines = new int[]{0, 0};
         int[] textDiffLines = new int[]{0, 0};
@@ -146,9 +218,9 @@ public class MineCommand implements Callable<Integer> {
         int conditionalExpressionChangeContainedCommit = 0;
         int numberOfFilesProcessed = 0;
 
-        log.info("Number of commits to be processed: {}", res.size());
+        log.info("Number of commits to be processed: {}", commitEditscriptMap.size());
 
-        for (String commitID : res.keySet()) {
+        for (String commitID : commitEditscriptMap.keySet()) {
             List<MicroChangeDAO> microChangeDAOs = new LinkedList<>();
             List<RefactoringDAO> refactoringDAOs = new LinkedList<>();
 
@@ -158,17 +230,11 @@ public class MineCommand implements Callable<Integer> {
             log.info("Mining {}/{} {}...", count, total_count, commitID);
 
             List<Refactoring> refactoringList = refMap.getOrDefault(commitID, new LinkedList<>());
-            // load renaming refactoring
-            Map<String, RenameRefactoring> renamingMap = new HashMap<>();
-            for(Refactoring refactoring:refactoringList){
-                if(refactoring instanceof RenameRefactoring){
-                    String renameSignature = ((RenameRefactoring) refactoring).getRename();
-                    renamingMap.put(renameSignature, (RenameRefactoring) refactoring);
-                    }
-            }
+
+            Map<String, RenameRefactoring> renamingMap = extractRenameRefactorings(refactoringList);
 
 //            log.info("refactoringList {}", refactoringList);
-            for (DiffEditScriptWithSource diffEditScriptWithSource : res.get(commitID)) {
+            for (DiffEditScriptWithSource diffEditScriptWithSource : commitEditscriptMap.get(commitID)) {
                 log.info("DiffEditScriptWithSource {}", diffEditScriptWithSource);
                 numberOfFilesProcessed++;
                 EditScript editScript = diffEditScriptWithSource.getEditScript();
@@ -338,25 +404,19 @@ public class MineCommand implements Callable<Integer> {
         }
 
 
-        CSVWriter.writeCommit2Json(commitDAOs, config.outputJsonPath);
-        CSVWriter.writeCommit2CSV(config.outputJsonPath, config.outputCsvPath);
 
+        writeResults(commitDAOs, notCovered);
 
-        String originalRepoGitPath;
-        if(config.notCoveredPath==null) {
-            CSVWriter.writeNotCoveredToJson(notCovered, "./notCovered.json");
-        }else {
-            CSVWriter.writeNotCoveredToJson(notCovered, config.notCoveredPath);
-        }
+        logSummaryStats(totalADCodeChangeLines,
+                microADChangeCoveredLines,
+                mrADChangeCoveredLines,
+                conditionalExpressionChangeContainedCommit,
+                numberTotalConditionRelatedActionNumber,
+                numberMicroChangeContainedConditionRelatedAction,
+                numberOfFilesProcessed
+                );
 
-        logConditionalExpressionChangeContainedCommit(conditionalExpressionChangeContainedCommit);
-        logNumberOfFilesBeingProcessed(numberOfFilesProcessed);
-        logTreeDALines(totalADCodeChangeLines);
 //        logTextDALines(textDiffLines);
-        logMicroChangeCoveredDALines(microADChangeCoveredLines);
-        logMicroChangeCoverageRatio(microADChangeCoveredLines, totalADCodeChangeLines);
-        logMicroChangeWithRefCoveregeRatio(mrADChangeCoveredLines, totalADCodeChangeLines);
-        logActions(numberTotalConditionRelatedActionNumber, numberMicroChangeContainedConditionRelatedAction);
 
 //        log.info("Converting method-level commit hash to original hash according to {}", config.commitMap);
 //        minedMicroChanges.forEach(p -> p.setCommitID(commitMapper.getMap().get((p.getCommitID()))));
