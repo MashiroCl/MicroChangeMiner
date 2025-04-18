@@ -2,6 +2,7 @@ package org.mashirocl.microchange.loop;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
+import org.apache.commons.io.filefilter.FalseFileFilter;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 import org.mashirocl.microchange.MicroChangePattern;
@@ -18,20 +19,23 @@ import java.util.Map;
 public class ConvertForToWhile implements MicroChangePattern {
     /**
      * The for-loop is replaced by a while-loop
-     * A node, which is a Block, is the child node of a ForStatement,
-     * is moved by a move-tree action to be a child mode of a WhileStatement
+     *
+     * The A child node (for-body) is moved from a for-statement to be the child of a while-statement,
+     * the original for-statement is removed
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
-        return action.getName().equals("move-tree")
-                && action.getNode().getParent().getType().name.equals("ForStatement")
-                && mappings.containsKey(action.getNode())
-                && mappings.get(action.getNode()).getParent().getType().name.equals("WhileStatement");
+        return false;
     }
 
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
-        return matchConditionGumTree(action, mappings);
+        return action.getName().equals("move-tree")
+                && action.getNode().getParent().getType().name.equals("ForStatement")
+                && nodeActions.containsKey(action.getNode())
+                && nodeActions.get(action.getNode().getParent()).stream().anyMatch(p->p.getName().contains("delete"))
+                && mappings.containsKey(action.getNode())
+                && mappings.get(action.getNode()).getParent().getType().name.equals("WhileStatement");
     }
 
     @Override
