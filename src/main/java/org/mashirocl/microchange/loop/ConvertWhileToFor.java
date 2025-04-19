@@ -39,9 +39,22 @@ public class ConvertWhileToFor implements MicroChangePattern {
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         // being moved for-loop body
-        // TODO: should we include the for-statement line?
+        // TODO: discussion: should we calculate the coverage of only for-statement line or only for-body or both?
         SrcDstRange srcDstRange = new SrcDstRange();
-        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
+        // while-statement
+        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode().getParent()),
+                editScriptStorer.getDstCompilationUnit()));
+        // while-body
+        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
+                editScriptStorer.getDstCompilationUnit()));
+
+        //for-statement
+        Tree forBodyNode = mappings.get(action.getNode());
+        Tree forStatementNode = forBodyNode.getParent();
+        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
+                editScriptStorer.getDstCompilationUnit()));
+        //while-body
+        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forBodyNode),
                 editScriptStorer.getDstCompilationUnit()));
         return srcDstRange;
     }
