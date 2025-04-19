@@ -20,7 +20,7 @@ public class ConvertForToWhile implements MicroChangePattern {
     /**
      * The for-loop is replaced by a while-loop
      *
-     * The A child node (for-body) is moved from a for-statement to be the child of a while-statement,
+     * A child node (for-body) is moved from a for-statement to be the child of a while-statement,
      * the original for-statement is removed
      */
     @Override
@@ -47,8 +47,8 @@ public class ConvertForToWhile implements MicroChangePattern {
         srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode().getParent()),
                 editScriptStorer.getDstCompilationUnit()));
         // for-body
-        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
-                editScriptStorer.getDstCompilationUnit()));
+//        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
+//                editScriptStorer.getDstCompilationUnit()));
 
         //while-statement
         Tree whileBodyNode = mappings.get(action.getNode());
@@ -56,8 +56,8 @@ public class ConvertForToWhile implements MicroChangePattern {
         srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(whileStatementNode),
                 editScriptStorer.getDstCompilationUnit()));
         //while-body
-        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(whileBodyNode),
-                editScriptStorer.getDstCompilationUnit()));
+//        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(whileBodyNode),
+//                editScriptStorer.getDstCompilationUnit()));
         return srcDstRange;
     }
 }
