@@ -50,7 +50,7 @@ public class ConvertForEachToFor implements MicroChangePattern {
         //for-statement
         Tree forBodyNode = mappings.get(action.getNode());
         Tree forStatementNode = forBodyNode.getParent();
-        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
+        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
                 editScriptStorer.getDstCompilationUnit()));
         //for-body
 //        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(whileBodyNode),

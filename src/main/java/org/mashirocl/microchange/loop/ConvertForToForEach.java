@@ -47,7 +47,7 @@ public class ConvertForToForEach implements MicroChangePattern {
         //foeach-statement
         Tree foreachBodyNode = mappings.get(action.getNode());
         Tree forStatementNode = foreachBodyNode.getParent();
-        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
+        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
                 editScriptStorer.getDstCompilationUnit()));
         return srcDstRange;
     }

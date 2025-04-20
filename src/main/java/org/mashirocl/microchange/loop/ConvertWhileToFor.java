@@ -51,7 +51,7 @@ public class ConvertWhileToFor implements MicroChangePattern {
         //for-statement
         Tree forBodyNode = mappings.get(action.getNode());
         Tree forStatementNode = forBodyNode.getParent();
-        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
+        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forStatementNode),
                 editScriptStorer.getDstCompilationUnit()));
         //while-body
 //        srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forBodyNode),
