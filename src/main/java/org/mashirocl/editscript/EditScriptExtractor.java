@@ -40,6 +40,56 @@ public class EditScriptExtractor {
             return EditScriptMapping.of(editScriptGenerator.computeActions(mappings), mappings);
     }
 
+
+    private static List<DiffEditScriptWithSource> processCommit(RepositoryAccess ra, DiffFormatter diffFormatter, RevCommit commit) throws IOException {
+        List<DiffEditScriptWithSource> diffEditScripts = new LinkedList<>();
+        if (commit.getParents().length == 0) {
+//                    log.info("parent number is 0, skipped");
+            return diffEditScripts;
+        }
+        RevTree newTree = commit.getTree();
+        RevTree oldTree = commit.getParent(0).getTree();
+        List<DiffEntry> diffEntryList = diffFormatter.scan(oldTree, newTree);
+        // skip the commits which are purely addition or deletion
+        if (diffEntryList.stream().allMatch(p -> p.getChangeType() == DiffEntry.ChangeType.ADD)
+                || diffEntryList.stream().allMatch(p -> p.getChangeType() == DiffEntry.ChangeType.DELETE)) {
+//                    log.info("Purely addition or deletion, skipped");
+            return diffEditScripts;
+        }
+
+        for (DiffEntry diffEntry : diffEntryList) {
+
+            // exclude non-source code file (on both file-level/method-level)
+            String oldPath = diffEntry.getOldPath();
+            String newPath = diffEntry.getNewPath();
+            if (!oldPath.endsWith(".java") &&
+                    !newPath.endsWith(".java") &&
+                    !oldPath.endsWith(".mjava") &&
+                    !newPath.endsWith(".mjava")) {
+//                        log.info("Change not to source code file, oldpath: {}, newpath: {}", oldPath, newPath);
+                continue;
+            }
+
+//                    skip the file which has only addition/ deletion
+            if (diffEntry.getChangeType() == DiffEntry.ChangeType.ADD
+                    || diffEntry.getChangeType() == DiffEntry.ChangeType.DELETE)
+                continue;
+
+            SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
+                    FileSource.of(newPath, newTree, ra.getRepository()));
+            MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
+
+            EditScript editScript = editScriptGenerator.computeActions(mapping);
+            EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
+            editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
+            editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
+
+            diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
+
+        }
+        return diffEditScripts;
+    }
+
     /**
      * extract edit scripts contained in the commits (startCommitID, endCommitID] in the repository
      * @param ra
@@ -53,61 +103,18 @@ public class EditScriptExtractor {
         Map<String, List<DiffEditScriptWithSource>> res = new HashMap<>();
         Iterable<RevCommit> walk = ra.walk(startCommitID, endCommitID);
         int count = 0;
-        int processed_method_count = 0;
+        int processedMethodCount = 0;
         try {
             for (RevCommit commit : walk) {
                 count++;
                 log.info("Getting edit script for {}, #{}", commit.getId().name(), count);
-                if (commit.getParents().length == 0) {
-//                    log.info("parent number is 0, skipped");
-                    continue;
+                List<DiffEditScriptWithSource> diffEditScripts = processCommit(ra, diffFormatter, commit);
+                processedMethodCount += diffEditScripts.size();
+                if(!diffEditScripts.isEmpty()) {
+                    res.put(commit.getId().name(), diffEditScripts);
                 }
-                RevTree newTree = commit.getTree();
-                RevTree oldTree = commit.getParent(0).getTree();
-                List<DiffEntry> diffEntryList = diffFormatter.scan(oldTree, newTree);
-                // skip the commits which are purely addition or deletion
-                if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
-                        || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
-                {
-//                    log.info("Purely addition or deletion, skipped");
-                    continue;
-                }
-                List<DiffEditScriptWithSource> diffEditScripts = new LinkedList<>();
-
-                for (DiffEntry diffEntry : diffEntryList) {
-
-                    // exclude non-source code file (on both file-level/method-level)
-                    String oldPath = diffEntry.getOldPath();
-                    String newPath = diffEntry.getNewPath();
-                    if(!oldPath.endsWith(".java") &&
-                            !newPath.endsWith(".java") &&
-                            !oldPath.endsWith(".mjava") &&
-                            !newPath.endsWith(".mjava")){
-//                        log.info("Change not to source code file, oldpath: {}, newpath: {}", oldPath, newPath);
-                        continue;
-                    }
-
-//                    skip the file which has only addition/ deletion
-                    if(diffEntry.getChangeType()==DiffEntry.ChangeType.ADD
-                            ||diffEntry.getChangeType()==DiffEntry.ChangeType.DELETE)
-                        continue;
-
-                    SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
-                            FileSource.of(newPath, newTree, ra.getRepository()));
-                    MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
-
-                    EditScript editScript = editScriptGenerator.computeActions(mapping);
-                    EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
-                    editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
-                    editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
-
-                    diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
-                    processed_method_count++;
-                }
-
-                res.put(commit.getId().name(), diffEditScripts);
             }
-            log.info("Edit script computed, {} methods processed", processed_method_count);
+            log.info("Edit script computed, {} methods processed", processedMethodCount);
             return res;
         }
         catch (IOException e){
@@ -127,47 +134,10 @@ public class EditScriptExtractor {
         try {
             for (RevCommit commit : walk) {
                 if(!commit.getId().name().equals(commitID)) continue;
-                if (commit.getParents().length == 0) {
-                    continue;
+                List<DiffEditScriptWithSource> diffEditScripts = processCommit(ra, diffFormatter, commit);
+                if(!diffEditScripts.isEmpty()) {
+                    res.put(commit.getId().name(), diffEditScripts);
                 }
-                RevTree newTree = commit.getTree();
-                RevTree oldTree = commit.getParent(0).getTree();
-                List<DiffEntry> diffEntryList = diffFormatter.scan(oldTree, newTree);
-                // skip the commits which are purely addition or deletion
-                if(diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.ADD)
-                        || diffEntryList.stream().allMatch(p->p.getChangeType()==DiffEntry.ChangeType.DELETE))
-                {
-                    continue;
-                }
-                List<DiffEditScriptWithSource> diffEditScripts = new LinkedList<>();
-
-                for (DiffEntry diffEntry : diffEntryList) {
-                    String oldPath = diffEntry.getOldPath();
-                    String newPath = diffEntry.getNewPath();
-                    if(!oldPath.contains(".java") &&
-                            !newPath.contains(".java") &&
-                            !oldPath.contains(".mjava") &&
-                            !newPath.contains(".mjava")){
-                        continue;
-                    }
-                // skip the file which has only addition/ deletion
-                    if(diffEntry.getChangeType()==DiffEntry.ChangeType.ADD
-                            ||diffEntry.getChangeType()==DiffEntry.ChangeType.DELETE)
-                        continue;
-
-                    SourcePair sourcePair = SourcePair.of(FileSource.of(oldPath, oldTree, ra.getRepository()),
-                            FileSource.of(newPath, newTree, ra.getRepository()));
-
-                    MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
-
-                    EditScript editScript = editScriptGenerator.computeActions(mapping);
-                    EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
-                    editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
-                    editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
-                    diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
-                }
-
-                res.put(commit.getId().name(), diffEditScripts);
             }
             return res;
         }
