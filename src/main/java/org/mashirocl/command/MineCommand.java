@@ -248,9 +248,6 @@ public class MineCommand implements Callable<Integer> {
                         LinkAttacher.attachLink(commitMapper.getMap().get(commitID), link.toString()),
                         microChangeDAOs, refactoringDAOs));
             }
-
-            log.info("microChangeDAOs.size "+ microChangeDAOs.size());
-            log.info("refactoringsDAOs.size "+refactoringDAOs.size());
         }
 
     }
@@ -280,7 +277,7 @@ public class MineCommand implements Callable<Integer> {
         Map<Tree, List<Action>> nodeActions = ActionRetriever.retrieveMap(editScript);
 
         // Extract conditional expression ranges
-        SrcDstRange srcDstLineRangeOfIf = extractConditionalExpressionRanges(editScriptStorer, stats);
+        SrcDstRange srcDstLineRangeOfIf = extractStructureRanges(ControlStructureType.IF, editScriptStorer, stats);
 
         // Intersect with textual diff if available
         if (textualDiff.containsKey(commitID) &&
@@ -492,18 +489,29 @@ public class MineCommand implements Callable<Integer> {
         }
     }
 
-
-    private SrcDstRange extractConditionalExpressionRanges(EditScriptStorer editScriptStorer, ProcessingStats stats){
-        SrcDstRange srcDstLineRangeOfIf = new SrcDstRange();
-        if (editScriptStorer instanceof EditScriptStorerIncludeIf) {
-            srcDstLineRangeOfIf =
-                    ((EditScriptStorerIncludeIf) editScriptStorer).getSrcDstLineRangeOfIf();
+    /**
+     * return line ranges for structure expressions such as IF, FOR, WHILE, etc.
+     * @param editScriptStorer
+     * @param stats
+     * @return
+     */
+    private SrcDstRange extractStructureRanges(ControlStructureType type, EditScriptStorer editScriptStorer, ProcessingStats stats){
+        SrcDstRange structureRanges = new SrcDstRange();
+        structureRanges = editScriptStorer.getStructureRange(type);
+        if(type.equals(ControlStructureType.IF)){
             stats.numberOfConditionalExpression[0] +=
-                    coveredLength(srcDstLineRangeOfIf.getSrcRange());
+                    coveredLength(structureRanges.getSrcRange());
             stats.numberOfConditionalExpression[1] +=
-                    coveredLength(srcDstLineRangeOfIf.getDstRange());
+                    coveredLength(structureRanges.getDstRange());
         }
-        return srcDstLineRangeOfIf;
+        // TODO: structure ranges for FOR && While
+        return structureRanges;
+    }
+
+
+    private SrcDstRange extractLoopExpresionRanges(EditScriptStorer editScriptStorer, ProcessingStats stats){
+        SrcDstRange srcDstRangeOfLoop = new SrcDstRange();
+        return null;
     }
 
 

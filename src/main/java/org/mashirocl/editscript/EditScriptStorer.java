@@ -14,6 +14,8 @@ import org.mashirocl.microchange.SrcDstRange;
 import org.mashirocl.source.SourcePair;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author mashirocl@gmail.com
@@ -28,6 +30,7 @@ public class EditScriptStorer{
     private final CompilationUnit srcCompilationUnit;
     private final CompilationUnit dstCompilationUnit;
     private SrcDstRange changedLines;
+    private final Map<ControlStructureType, SrcDstRange> controlStructureRanges = new HashMap<>();
 
     public EditScriptStorer(final EditScript editScript,
                             final MappingStore mappingStore,
@@ -77,5 +80,13 @@ public class EditScriptStorer{
         }
 
 
+    }
+
+    public void setStructureRanges(ControlStructureType controlStructureType, SrcDstRange srcDstRange){
+        controlStructureRanges.put(controlStructureType, srcDstRange);
+    }
+
+    public SrcDstRange getStructureRange(ControlStructureType controlStructureType){
+        return controlStructureRanges.get(controlStructureType);
     }
 }

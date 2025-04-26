@@ -80,14 +80,22 @@ public class EditScriptExtractor {
             MappingStore mapping = sourcePair.getMappingStore(defaultMatcher);
 
             EditScript editScript = editScriptGenerator.computeActions(mapping);
-            EditScriptStorerIncludeIf editScriptStorerIncludeIf = new EditScriptStorerIncludeIf(editScript, mapping, sourcePair);
-            editScriptStorerIncludeIf.setSrcDstLineRangeOfIf(sourcePair.locateIfLineRange());
-            editScriptStorerIncludeIf.addChangedLineRanges(diffFormatter, diffEntry);
-
-            diffEditScripts.add(DiffEditScriptWithSource.of(DiffEditScript.of(diffEntry, editScriptStorerIncludeIf.getEditScript()), editScriptStorerIncludeIf));
-
+            EditScriptStorer storer = createEditScriptStorer(editScript, mapping, sourcePair, diffFormatter, diffEntry);
+            diffEditScripts.add(new DiffEditScriptWithSource(diffEntry,editScript, storer));
         }
         return diffEditScripts;
+    }
+
+    private static EditScriptStorer createEditScriptStorer(EditScript editScript, MappingStore mapping, SourcePair sourcePair, DiffFormatter diffFormatter, DiffEntry diffEntry){
+        EditScriptStorer storer = new EditScriptStorer(editScript, mapping, sourcePair);
+
+        // Set ranges for all control structures
+        storer.setStructureRanges(ControlStructureType.IF, sourcePair.locateIfLineRange());
+        storer.setStructureRanges(ControlStructureType.FOR, sourcePair.locateForLineRange());
+        storer.setStructureRanges(ControlStructureType.WHILE, sourcePair.locateWhileLineRange());
+
+        storer.addChangedLineRanges(diffFormatter, diffEntry);
+        return storer;
     }
 
     /**
