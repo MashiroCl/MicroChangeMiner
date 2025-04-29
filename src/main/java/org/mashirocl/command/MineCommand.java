@@ -235,6 +235,7 @@ public class MineCommand implements Callable<Integer> {
 
         List<Refactoring> refactoringList = refMap.getOrDefault(commitID, new LinkedList<>());
         Map<String, RenameRefactoring> renamingMap = extractRenameRefactorings(refactoringList);
+        log.info("(added)renamingMap {}", renamingMap);
 
         for (DiffEditScriptWithSource diffScript : diffScripts) {
             stats.numberOfFilesProcessed++;
@@ -311,7 +312,7 @@ public class MineCommand implements Callable<Integer> {
         // Process actions and collect ranges
         ChangeProcessingResult changeResult = processDiffActions(
                 editScript, mappings, nodeActions, editScriptStorer,
-                structureRanges, actionLocator, patternMatcherGumTree, stats);
+                structureRanges, actionLocator, patternMatcherGumTree, stats, renamingMap, diffScript);
 
         // Process microchanges and refactorings
         processChangesAndRefactorings(
@@ -634,19 +635,24 @@ public class MineCommand implements Callable<Integer> {
      */
     private ChangeProcessingResult processDiffActions(EditScript editScript,Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions,
                                                  EditScriptStorer editScriptStorer, Map<ControlStructureType, SrcDstRange> structureRanges,ActionLocator actionLocator,
-                                                      PatternMatcher patternMatcherGumTree, ProcessingStats stats){
+                                                      PatternMatcher patternMatcherGumTree, ProcessingStats stats, Map<String, RenameRefactoring> renamingMap, DiffEditScriptWithSource diffScript){
         List<MicroChange> microChangesPerFile = new LinkedList<>();
         SrcDstRange treeActionPerFile = new SrcDstRange(); // record action ranges that intersect with structure changes
         Map<ControlStructureType, SrcDstRange> structureActionRanges = new HashMap<>();
         log.info("# of actions {}", editScript.size());
         for (Action a : editScript) {
+            // action location
+            SrcDstRange treeActionRanges =
+                    actionLocator.getLineRanges(a, mappings, editScriptStorer);
+
+            // if it is an renaming action, skip the micro-change detection
+            RenameRefactoring renameRefactoring = collectRenameContainedActionsRange(a, renamingMap, treeActionRanges, diffScript);
+            if(renameRefactoring!=null) continue;
+
             // mine micro-changes
             List<MicroChange> microChanges =
                     patternMatcherGumTree.match(a, mappings, nodeActions, editScriptStorer);
 
-            // action location
-            SrcDstRange treeActionRanges =
-                    actionLocator.getLineRanges(a, mappings, editScriptStorer);
 
             if (!microChanges.isEmpty()) {
                 microChangesPerFile.addAll(microChanges);
@@ -671,9 +677,6 @@ public class MineCommand implements Callable<Integer> {
                 }
             }
 
-            // Collect rename contained actions range
-//            collectRenameContainedActionsRange(a, renamingMap, treeActionRanges, diffScript);
-
         }
         log.info("(added) treeActionPerFile {}", treeActionPerFile);
         return new ChangeProcessingResult(microChangesPerFile, treeActionPerFile);
@@ -696,7 +699,7 @@ public class MineCommand implements Callable<Integer> {
     /**
      * Collect rename contained actions range
      */
-    private void collectRenameContainedActionsRange(
+    private RenameRefactoring collectRenameContainedActionsRange(
             Action action,
             Map<String, RenameRefactoring> renamingMap,
             SrcDstRange actionRanges,
@@ -706,6 +709,7 @@ public class MineCommand implements Callable<Integer> {
         if (renameRefactoring != null) {
             renameRefactoring.attachLineRange(diffScript, actionRanges);
         }
+       return renameRefactoring;
     }
 
 
