@@ -3,10 +3,13 @@ package org.mashirocl.match;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.Tree;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.mashirocl.microchange.SrcDstRange;
 import org.mashirocl.refactoringminer.RenameRefactoring;
 
+import java.util.List;
 import java.util.Map;
 
 
@@ -94,6 +97,29 @@ public class ActionStatus {
         a.getDstRange().removeAll(b.getDstRange().complement());
         res.setSrcRange(a.getSrcRange());
         res.setDstRange(a.getDstRange());
+        return res;
+    }
+
+    public static SrcDstRange getIntersection(SrcDstRange a, List<SrcDstRange> list){
+        SrcDstRange res = new SrcDstRange();
+        SrcDstRange unionRange = getUnion(list);
+        a.getSrcRange().removeAll(unionRange.getSrcRange().complement());
+        a.getDstRange().removeAll(unionRange.getDstRange().complement());
+        res.setSrcRange(a.getSrcRange());
+        res.setDstRange(a.getDstRange());
+        return res;
+    }
+
+    public static SrcDstRange getUnion(List<SrcDstRange> list){
+        SrcDstRange res = new SrcDstRange();
+        RangeSet<Integer> unionSrcRange = TreeRangeSet.create();
+        RangeSet<Integer> unionDstRange = TreeRangeSet.create();
+        for (SrcDstRange range : list) {
+            unionSrcRange.addAll(range.getSrcRange());
+            unionDstRange.addAll(range.getDstRange());
+        }
+        res.setSrcRange(unionSrcRange);
+        res.setDstRange(unionDstRange);
         return res;
     }
 
