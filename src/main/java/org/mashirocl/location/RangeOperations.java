@@ -31,4 +31,12 @@ public class RangeOperations {
     public static Range<Integer> firstPositiontoRange(Tree node) {
         return Range.closedOpen(node.getPos(), node.getPos()+1);
     }
+
+    public static RangeSet<Integer> deepCopyRangeSet(RangeSet<Integer> original) {
+        RangeSet<Integer> copy = TreeRangeSet.create();
+        for (Range<Integer> range : original.asRanges()) {
+            copy.add(range);
+        }
+        return copy;
+    }
 }

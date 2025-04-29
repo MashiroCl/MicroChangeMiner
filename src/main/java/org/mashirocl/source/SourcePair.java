@@ -93,10 +93,6 @@ public class SourcePair{
               // Visit the IfStatement nodes
               @Override
               public boolean visit(IfStatement node) {
-//                  positionRange.getSrcRange().add(
-//                          Range.closedOpen(node.getStartPosition(),
-//                                  node.getStartPosition()+node.getLength()));
-//                  return super.visit(node);
                   // only conditional
                   positionRange.getSrcRange().add(
                           Range.closedOpen(node.getExpression().getStartPosition(),
@@ -109,10 +105,6 @@ public class SourcePair{
               // Visit the IfStatement nodes
               @Override
               public boolean visit(IfStatement node) {
-//                  positionRange.getDstRange().add(
-//                          Range.closedOpen(node.getStartPosition(),
-//                                  node.getStartPosition()+node.getLength()));
-//                  return super.visit(node);
                   positionRange.getDstRange().add(
                           Range.closedOpen(node.getExpression().getStartPosition(),
                                   node.getExpression().getStartPosition()+node.getExpression().getLength()));
@@ -120,6 +112,64 @@ public class SourcePair{
 
               }
           }
+        );
+        return RangeOperations.toLineRange(positionRange, srcCompilationUnit, dstCompilationUnit);
+    }
+
+    public SrcDstRange locateForLineRange(){
+        SrcDstRange positionRange = new SrcDstRange();
+        srcCompilationUnit.accept(new ASTVisitor() {
+                                      // Visit the ForStatement nodes
+                                      @Override
+                                      public boolean visit(ForStatement node) {
+                                          // only conditional
+                                          positionRange.getSrcRange().add(
+                                                  Range.closedOpen(node.getExpression().getStartPosition(),
+                                                          node.getExpression().getStartPosition()+node.getExpression().getLength()));
+                                          return super.visit(node);
+                                      }
+                                  }
+        );
+        dstCompilationUnit.accept(new ASTVisitor() {
+                                      // Visit the ForStatement nodes
+                                      @Override
+                                      public boolean visit(ForStatement node) {
+                                          positionRange.getDstRange().add(
+                                                  Range.closedOpen(node.getExpression().getStartPosition(),
+                                                          node.getExpression().getStartPosition()+node.getExpression().getLength()));
+                                          return super.visit(node);
+
+                                      }
+                                  }
+        );
+        return RangeOperations.toLineRange(positionRange, srcCompilationUnit, dstCompilationUnit);
+    }
+
+    public SrcDstRange locateWhileLineRange(){
+        SrcDstRange positionRange = new SrcDstRange();
+        srcCompilationUnit.accept(new ASTVisitor() {
+                                      // Visit the ForStatement nodes
+                                      @Override
+                                      public boolean visit(WhileStatement node) {
+                                          // only conditional
+                                          positionRange.getSrcRange().add(
+                                                  Range.closedOpen(node.getExpression().getStartPosition(),
+                                                          node.getExpression().getStartPosition()+node.getExpression().getLength()));
+                                          return super.visit(node);
+                                      }
+                                  }
+        );
+        dstCompilationUnit.accept(new ASTVisitor() {
+                                      // Visit the ForStatement nodes
+                                      @Override
+                                      public boolean visit(WhileStatement node) {
+                                          positionRange.getDstRange().add(
+                                                  Range.closedOpen(node.getExpression().getStartPosition(),
+                                                          node.getExpression().getStartPosition()+node.getExpression().getLength()));
+                                          return super.visit(node);
+
+                                      }
+                                  }
         );
         return RangeOperations.toLineRange(positionRange, srcCompilationUnit, dstCompilationUnit);
     }

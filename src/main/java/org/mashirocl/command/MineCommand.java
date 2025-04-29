@@ -12,6 +12,7 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.mashirocl.dao.*;
 import org.mashirocl.editscript.*;
+import org.mashirocl.location.RangeOperations;
 import org.mashirocl.match.ActionLocator;
 import org.mashirocl.match.ActionStatus;
 import org.mashirocl.match.PatternMatcher;
@@ -171,14 +172,15 @@ public class MineCommand implements Callable<Integer> {
     }
 
     private void logSummaryStats(ProcessingStats stats) {
-        logConditionalExpressionChangeContainedCommit(stats.conditionalExpressionChangeContainedCommit);
+        logStructureChangeLength(stats.structureExpressionChangeLines);
+        logStructureExpressionChangeContainedCommit(stats.structureExpressionChangeContainedCommit);
         logNumberOfFilesBeingProcessed(stats.numberOfFilesProcessed);
         logTreeDALines(stats.totalADCodeChangeLines);
         logMicroChangeCoveredDALines(stats.microADChangeCoveredLines);
         logMicroChangeCoverageRatio(stats.microADChangeCoveredLines, stats.totalADCodeChangeLines);
         logMicroChangeWithRefCoveregeRatio(stats.mrADChangeCoveredLines, stats.totalADCodeChangeLines);
         logActions(stats.numberTotalConditionRelatedActionNumber,
-                stats.numberMicroChangeContainedConditionRelatedAction);
+                stats.numberMicroChangeContainedStructureRelatedAction);
     }
 
 
@@ -277,14 +279,27 @@ public class MineCommand implements Callable<Integer> {
         Map<Tree, List<Action>> nodeActions = ActionRetriever.retrieveMap(editScript);
 
         // Extract conditional expression ranges
-        SrcDstRange srcDstLineRangeOfIf = extractStructureRanges(ControlStructureType.IF, editScriptStorer, stats);
+//        SrcDstRange srcDstLineRangeOfIf = extractStructureRanges(ControlStructureType.IF, editScriptStorer, stats);
 
-        // Intersect with textual diff if available
+        Map<ControlStructureType, SrcDstRange> structureRanges = new HashMap<>();
+        for (ControlStructureType type : ControlStructureType.values()) {
+            structureRanges.put(type, extractStructureRanges(type, editScriptStorer, stats));
+        }
+
+
+        // Intersect structure expression ranges with textual diff if available
         if (textualDiff.containsKey(commitID) &&
                 textualDiff.get(commitID).containsKey(diffScript.getDiffEntry().getOldPath())) {
-            srcDstLineRangeOfIf = ActionStatus.getIntersection(
-                    srcDstLineRangeOfIf,
-                    textualDiff.get(commitID).get(diffScript.getDiffEntry().getOldPath()));
+            structureRanges.keySet().forEach(type -> {
+                structureRanges.compute(type, (k, range) -> ActionStatus.getIntersection(range, textualDiff.get(commitID).get(diffScript.getDiffEntry().getOldPath())));});
+
+        for(ControlStructureType type : structureRanges.keySet()) {
+            log.info("Structure Ranges {}: {}", type, structureRanges.get(type));
+
+        }
+//            srcDstLineRangeOfIf = ActionStatus.getIntersection(
+//                    srcDstLineRangeOfIf,
+//                    textualDiff.get(commitID).get(diffScript.getDiffEntry().getOldPath()));
         }
 
         // not include If condition, exclude
@@ -295,18 +310,23 @@ public class MineCommand implements Callable<Integer> {
 
         // Process actions and collect ranges
         ChangeProcessingResult changeResult = processDiffActions(
-                editScript, mappings, nodeActions, diffScript,editScriptStorer, renamingMap,
-                srcDstLineRangeOfIf, actionLocator, patternMatcherGumTree, stats);
+                editScript, mappings, nodeActions, editScriptStorer,
+                structureRanges, actionLocator, patternMatcherGumTree, stats);
 
         // Process microchanges and refactorings
         processChangesAndRefactorings(
                 diffScript, commitID, changeResult.microChanges, refactoringList,
-                changeResult.treeActionRange, srcDstLineRangeOfIf, repositoryName,
+                changeResult.treeActionRange, structureRanges, repositoryName,
                 microChangeDAOs, refactoringDAOs, notCovered, stats);
     }
 
     /**
-     * Process microchanges and refactorings, convert to file level and store
+     * Process microchanges and refactorings,
+     * 1. convert to file level,
+     * 2. intersect the micro-change ranges with tree-diff and structure expression ranges,
+     * 3. intersect the refactoring ranges with tree-diff and structure expression ranges,
+     * 4. union the micro-change range and refactoring ranges
+     * 5. store micro-changeDAO and refactoringDAOs
      */
     private void processChangesAndRefactorings(
             DiffEditScriptWithSource diffScript,
@@ -314,7 +334,8 @@ public class MineCommand implements Callable<Integer> {
             List<MicroChange> microChangesPerFile,
             List<Refactoring> refactoringList,
             SrcDstRange treeActionRange,
-            SrcDstRange conditionalExprRange,
+            Map<ControlStructureType, SrcDstRange> structureRanges,
+//            SrcDstRange conditionalExprRange,
             String repositoryName,
             List<MicroChangeDAO> microChangeDAOs,
             List<RefactoringDAO> refactoringDAOs,
@@ -328,32 +349,69 @@ public class MineCommand implements Callable<Integer> {
         List<MicroChangeFileSpecified> microChangeFileSpecifiedList = convertToFileSpecified(
                 microChangesPerFile, diffScript.getDiffEntry());
 
+
         // Intersection with tree-diff and conditional expression ranges
-        List<MicroChangeFileSpecified> inConditionMicroChange = microChangeIntersectWithRange(
-                microChangeFileSpecifiedList, treeActionRange);
-        List<MicroChangeFileSpecified> treeDiffInConditionMicroChange = microChangeIntersectWithRange(
-                inConditionMicroChange, conditionalExprRange);
+//        List<MicroChangeFileSpecified> inConditionMicroChange = microChangeIntersectWithRange(
+//                microChangeFileSpecifiedList, treeActionRange);
+//        List<MicroChangeFileSpecified> treeDiffInConditionMicroChange = microChangeIntersectWithRange(
+//                inConditionMicroChange, conditionalExprRange);
+
+        // Intersection of micro-chagnes with tree-diff and with structure expression range
+        Map<ControlStructureType, List<MicroChangeFileSpecified>> structureChangeMicroChange = new HashMap<>();
+        for (ControlStructureType type : structureRanges.keySet()) {
+            structureChangeMicroChange.put(type, microChangeIntersectWithRange(
+                    microChangeFileSpecifiedList, treeActionRange));
+        }
+        Map<ControlStructureType, List<MicroChangeFileSpecified>> treeDiffStructureChangeMicroChange = new HashMap<>();
+        for (ControlStructureType type : structureRanges.keySet()) {
+            treeDiffStructureChangeMicroChange.put(type, microChangeIntersectWithRange(
+                    structureChangeMicroChange.get(type), structureRanges.get(type)));
+        }
 
         // Intersection of refactorings with tree-diff and conditional expression ranges
-        List<Refactoring> inConditionRefactoring = refactoringIntersectWithRange(
-                diffScript, refactoringList, treeActionRange);
-        List<Refactoring> treeDiffInConditionRefactoring = refactoringIntersectWithRange(
-                diffScript, inConditionRefactoring, conditionalExprRange);
+//        List<Refactoring> inConditionRefactoring = refactoringIntersectWithRange(
+//                diffScript, refactoringList, treeActionRange);
+//        List<Refactoring> treeDiffInConditionRefactoring = refactoringIntersectWithRange(
+//                diffScript, inConditionRefactoring, conditionalExprRange);
+
+
+        // Intersection of refactorings with tree-diff and structure expression ranges
+        Map<ControlStructureType, List<Refactoring>> structureChangeRefactoring = new HashMap<>();
+        for (ControlStructureType type : structureRanges.keySet()) {
+            structureChangeRefactoring.put(type, refactoringIntersectWithRange(
+                    diffScript, refactoringList, treeActionRange));
+        }
+        Map<ControlStructureType, List<Refactoring>> treeDiffStructureChangeRefactoring = new HashMap<>();
+        for(ControlStructureType type : structureRanges.keySet()) {
+            treeDiffStructureChangeRefactoring.put(type, refactoringIntersectWithRange(
+                    diffScript, structureChangeRefactoring.get(type), structureRanges.get(type)));
+        }
 
         // Calculate combined range of microchanges and refactorings
-        SrcDstRange microChangeUnionRefRange = calculateMicroChangeUnionRefRange(
-                treeDiffInConditionMicroChange, treeDiffInConditionRefactoring, diffScript);
+//        SrcDstRange microChangeUnionRefRange = calculateMicroChangeUnionRefRange(
+//                structureChangeMicroChange, treeDiffStructureChangeRefactoring, diffScript);
+
+        // Calculate combined range of microchanges and refactorings
+        log.info("(added) treeDiffStructureChangeRefactoring {}", treeDiffStructureChangeRefactoring.get(ControlStructureType.FOR));
+        log.info("(added) treeDiffStructureChangeMicroChange {}", treeDiffStructureChangeMicroChange.get(ControlStructureType.FOR));
+        Map<ControlStructureType, SrcDstRange> microChangeUnionRefRange = new HashMap<>();
+        for (ControlStructureType type : structureRanges.keySet()) {
+            microChangeUnionRefRange.put(type, calculateMicroChangeUnionRefRange(treeDiffStructureChangeMicroChange.get(type),
+                    treeDiffStructureChangeRefactoring.get(type), diffScript));
+        }
+
+        log.info("(added) structureChangeUnionRefRange {}", microChangeUnionRefRange);
 
         // Update statistics
-        updateStatistics(treeActionRange, conditionalExprRange, treeDiffInConditionMicroChange,
+        updateStatistics(treeActionRange, structureRanges, treeDiffStructureChangeMicroChange,
                 microChangeUnionRefRange, stats);
 
         // Process uncovered ranges
-        processUncoveredRanges(commitID, diffScript, treeActionRange, conditionalExprRange,
+        processUncoveredRanges(commitID, diffScript, treeActionRange, structureRanges,
                 microChangeUnionRefRange, repositoryName, notCovered, methodLevelConvertor);
 
         // Convert and store microchanges and refactorings
-        storeChangesAndRefactorings(commitID, treeDiffInConditionMicroChange, treeDiffInConditionRefactoring,
+        storeChangesAndRefactorings(commitID, treeDiffStructureChangeMicroChange, treeDiffStructureChangeRefactoring,
                 microChangeDAOs, refactoringDAOs, methodLevelConvertor);
     }
 
@@ -373,48 +431,104 @@ public class MineCommand implements Callable<Integer> {
      */
     private void updateStatistics(
             SrcDstRange treeActionRange,
-            SrcDstRange conditionalExprRange,
-            List<MicroChangeFileSpecified> treeDiffInConditionMicroChange,
-            SrcDstRange microChangeUnionRefRange,
+            Map<ControlStructureType, SrcDstRange> structureRanges,
+//            SrcDstRange conditionalExprRange,
+            Map<ControlStructureType, List<MicroChangeFileSpecified>> structureChangeMicroChange,
+//            List<MicroChangeFileSpecified> treeDiffInConditionMicroChange,
+            Map<ControlStructureType, SrcDstRange> structureChangeUnionRefRange,
+//            SrcDstRange microChangeUnionRefRange,
             ProcessingStats stats) {
 
         // Update microchange coverage statistics
-        stats.mrADChangeCoveredLines[0] += coveredLength(microChangeUnionRefRange.getSrcRange());
-        stats.mrADChangeCoveredLines[1] += coveredLength(microChangeUnionRefRange.getDstRange());
+        RangeSet<Integer> structureChangeUnionRefRangeSrc = TreeRangeSet.create();
+        RangeSet<Integer> structureChangeUnionRefRangeDst = TreeRangeSet.create();
+        structureChangeMicroChange.keySet().forEach(type -> structureChangeUnionRefRangeSrc.addAll(structureChangeUnionRefRange.get(type).getSrcRange()));
+        structureChangeMicroChange.keySet().forEach(type -> structureChangeUnionRefRangeDst.addAll(structureChangeUnionRefRange.get(type).getDstRange()));
 
+        log.info("(added) structureChangeUnionRefRangeSrc {}", structureChangeUnionRefRangeSrc);
+        log.info("(added) structureChangeUnionRefRangeSrc length {}", coveredLength(structureChangeUnionRefRangeSrc));
+        stats.mrADChangeCoveredLines[0] += coveredLength(structureChangeUnionRefRangeSrc);
+        stats.mrADChangeCoveredLines[1] += coveredLength(structureChangeUnionRefRangeDst);
+
+//        stats.mrADChangeCoveredLines[0] += coveredLength(microChangeUnionRefRange.getSrcRange());
+//        stats.mrADChangeCoveredLines[1] += coveredLength(microChangeUnionRefRange.getDstRange());
+
+        boolean structureChangeContainFlag = false;
+
+        //TODO: need to union first? any duplpicate counted lines?
         // Update total AD code change statistics
-        if (!treeActionRange.getSrcRange().isEmpty()) {
-            treeActionRange.getSrcRange().removeAll(conditionalExprRange.getSrcRange().complement());
-            log.info("conditional expression range src: {}", conditionalExprRange.getSrcRange());
-            log.info("conditional expression lines deleted {}", treeActionRange);
-            stats.totalADCodeChangeLines[0] += coveredLength(treeActionRange.getSrcRange());
+        for(ControlStructureType type : structureRanges.keySet()) {
+            RangeSet<Integer> temp = RangeOperations.deepCopyRangeSet(treeActionRange.getSrcRange());
+            RangeSet<Integer> structureExprRange = structureRanges.get(type).getSrcRange();
+            temp.removeAll(structureExprRange.complement());
+            structureChangeContainFlag = structureChangeContainFlag || !temp.isEmpty();
+            log.info("{} expression range src: {}", type, structureExprRange);
+            log.info("{} expression lines deleted {}", type, temp);
+            stats.totalADCodeChangeLines[0] += coveredLength(temp);
+            stats.structureExpressionChangeLines.get(type)[0]+=coveredLength(temp);
         }
 
-        if (!treeActionRange.getDstRange().isEmpty()) {
-            treeActionRange.getDstRange().removeAll(conditionalExprRange.getDstRange().complement());
-            log.info("conditional expression range dst: {}", conditionalExprRange.getDstRange());
-            log.info("conditional expression lines added {}", treeActionRange.getDstRange());
-            stats.totalADCodeChangeLines[1] += coveredLength(treeActionRange.getDstRange());
+//        if (!treeActionRange.getSrcRange().isEmpty()) {
+//            RangeSet<Integer> temp = RangeOperations.deepCopyRangeSet(treeActionRange.getSrcRange());
+//            temp.removeAll(conditionalExprRange.getSrcRange().complement());
+//            log.info("conditional expression range src: {}", conditionalExprRange.getSrcRange());
+//            log.info("conditional expression lines deleted {}", treeActionRange);
+//            stats.totalADCodeChangeLines[0] += coveredLength(treeActionRange.getSrcRange());
+//        }
+
+//        if (!treeActionRange.getDstRange().isEmpty()) {
+//            treeActionRange.getDstRange().removeAll(conditionalExprRange.getDstRange().complement());
+//            log.info("conditional expression range dst: {}", conditionalExprRange.getDstRange());
+//            log.info("conditional expression lines added {}", treeActionRange.getDstRange());
+//            stats.totalADCodeChangeLines[1] += coveredLength(treeActionRange.getDstRange());
+//        }
+
+        for(ControlStructureType type : structureRanges.keySet()) {
+            RangeSet<Integer> temp = RangeOperations.deepCopyRangeSet(treeActionRange.getDstRange());
+            RangeSet<Integer> structureExprRange = structureRanges.get(type).getDstRange();
+            temp.removeAll(structureExprRange.complement());
+            structureChangeContainFlag = structureChangeContainFlag || !temp.isEmpty();
+            log.info("{} expression range dst: {}", type, structureExprRange);
+            log.info("{} expression lines added {}", type, temp);
+            stats.totalADCodeChangeLines[1] += coveredLength(temp);
+            stats.structureExpressionChangeLines.get(type)[1]+=coveredLength(temp);
         }
 
-        if (!treeActionRange.isEmpty()) {
-            stats.conditionalExpressionChangeContainedCommit += 1;
+        // structureRange intersection is not empty
+        if (structureChangeContainFlag) {
+            stats.structureExpressionChangeContainedCommit += 1;
+        }
+
+        for(ControlStructureType type : structureChangeMicroChange.keySet()) {
+            if (!structureChangeMicroChange.get(type).isEmpty()) {
+                RangeSet<Integer> srcRangeSet = TreeRangeSet.create();
+                for (MicroChangeFileSpecified m : structureChangeMicroChange.get(type)) {
+                    m.getLeftSideLocations().forEach(p -> srcRangeSet.add(p.getRange()));
+                }
+                stats.microADChangeCoveredLines[0] += coveredLength(srcRangeSet);
+
+                RangeSet<Integer> dstRangeSet = TreeRangeSet.create();
+                for (MicroChangeFileSpecified m : structureChangeMicroChange.get(type)) {
+                    m.getRightSideLocations().forEach(p -> dstRangeSet.add(p.getRange()));
+                }
+                stats.microADChangeCoveredLines[1] += coveredLength(dstRangeSet);
+            }
         }
 
         // Update microchange coverage statistics
-        if (!treeDiffInConditionMicroChange.isEmpty()) {
-            RangeSet<Integer> srcRangeSet = TreeRangeSet.create();
-            for (MicroChangeFileSpecified m : treeDiffInConditionMicroChange) {
-                m.getLeftSideLocations().forEach(p -> srcRangeSet.add(p.getRange()));
-            }
-            stats.microADChangeCoveredLines[0] += coveredLength(srcRangeSet);
-
-            RangeSet<Integer> dstRangeSet = TreeRangeSet.create();
-            for (MicroChangeFileSpecified m : treeDiffInConditionMicroChange) {
-                m.getRightSideLocations().forEach(p -> dstRangeSet.add(p.getRange()));
-            }
-            stats.microADChangeCoveredLines[1] += coveredLength(dstRangeSet);
-        }
+//        if (!treeDiffInConditionMicroChange.isEmpty()) {
+//            RangeSet<Integer> srcRangeSet = TreeRangeSet.create();
+//            for (MicroChangeFileSpecified m : treeDiffInConditionMicroChange) {
+//                m.getLeftSideLocations().forEach(p -> srcRangeSet.add(p.getRange()));
+//            }
+//            stats.microADChangeCoveredLines[0] += coveredLength(srcRangeSet);
+//
+//            RangeSet<Integer> dstRangeSet = TreeRangeSet.create();
+//            for (MicroChangeFileSpecified m : treeDiffInConditionMicroChange) {
+//                m.getRightSideLocations().forEach(p -> dstRangeSet.add(p.getRange()));
+//            }
+//            stats.microADChangeCoveredLines[1] += coveredLength(dstRangeSet);
+//        }
     }
 
     /**
@@ -424,8 +538,10 @@ public class MineCommand implements Callable<Integer> {
             String commitID,
             DiffEditScriptWithSource diffScript,
             SrcDstRange treeActionRange,
-            SrcDstRange conditionalExprRange,
-            SrcDstRange microChangeUnionRefRange,
+            Map<ControlStructureType, SrcDstRange> structureRanges,
+//            SrcDstRange conditionalExprRange,
+//            SrcDstRange microChangeUnionRefRange,
+            Map<ControlStructureType, SrcDstRange> structureChangeUnionRefRange ,
             String repositoryName,
             List<NotCoveredDAO> notCovered,
             MethodLevelConvertor methodLevelConvertor) throws Exception {
@@ -433,12 +549,15 @@ public class MineCommand implements Callable<Integer> {
         URL link = new URL(LinkAttacher.searchLink(repositoryName));
         CommitMapper commitMapper = createCommitMapper();
 
-        // Calculate the range that should be covered (intersection of tree action and conditional expression)
-        SrcDstRange shouldCoveredRange = ActionStatus.getIntersection(treeActionRange, conditionalExprRange);
+        // Calculate the range that should be covered (intersection of tree action and structure expression)
+        SrcDstRange shouldCoveredRange = ActionStatus.getIntersection(treeActionRange, structureRanges.values().stream().toList());
 
         // Calculate not covered ranges
-        RangeSet<Integer> srcNotCovered = notCoveredRange(shouldCoveredRange.getSrcRange(), microChangeUnionRefRange.getSrcRange());
-        RangeSet<Integer> dstNotCovered = notCoveredRange(shouldCoveredRange.getDstRange(), microChangeUnionRefRange.getDstRange());
+//        RangeSet<Integer> srcNotCovered = notCoveredRange(shouldCoveredRange.getSrcRange(), microChangeUnionRefRange.getSrcRange());
+//        RangeSet<Integer> dstNotCovered = notCoveredRange(shouldCoveredRange.getDstRange(), microChangeUnionRefRange.getDstRange());
+
+        RangeSet<Integer> srcNotCovered = notCoveredRange(shouldCoveredRange.getSrcRange(), ActionStatus.getUnion(structureChangeUnionRefRange.values().stream().toList()).getSrcRange());
+        RangeSet<Integer> dstNotCovered = notCoveredRange(shouldCoveredRange.getDstRange(), ActionStatus.getUnion(structureChangeUnionRefRange.values().stream().toList()).getDstRange());
 
         if (!srcNotCovered.isEmpty() || !dstNotCovered.isEmpty()) {
             // Convert method-level ranges to file-level
@@ -470,41 +589,36 @@ public class MineCommand implements Callable<Integer> {
      */
     private void storeChangesAndRefactorings(
             String commitID,
-            List<MicroChangeFileSpecified> treeDiffInConditionMicroChange,
-            List<Refactoring> treeDiffInConditionRefactoring,
+            Map<ControlStructureType, List<MicroChangeFileSpecified>> treeDiffStructureChangeMicroChange,
+//            List<MicroChangeFileSpecified> treeDiffInConditionMicroChange,
+            Map<ControlStructureType, List<Refactoring>> treeDiffStructureChangeRefactoring,
+//            List<Refactoring> treeDiffInConditionRefactoring,
             List<MicroChangeDAO> microChangeDAOs,
             List<RefactoringDAO> refactoringDAOs,
             MethodLevelConvertor methodLevelConvertor) {
 
         // Convert and store microchanges
-        for (MicroChangeFileSpecified microChange : treeDiffInConditionMicroChange) {
+        for (MicroChangeFileSpecified microChange : treeDiffStructureChangeMicroChange.values().stream().flatMap(List::stream).toList()) {
             methodLevelConvertor.covertMethodLevelMicroChangeToFileLevel(commitID, config.methodLevelGitPath, microChange);
             microChangeDAOs.add(new MicroChangeDAO(microChange));
         }
 
         // Convert and store refactorings
-        for (Refactoring refactoring : treeDiffInConditionRefactoring) {
+        for (Refactoring refactoring : treeDiffStructureChangeRefactoring.values().stream().flatMap(List::stream).toList()) {
             methodLevelConvertor.covertMethodLevelRefactoringToFileLevel(commitID, config.methodLevelGitPath, refactoring);
             refactoringDAOs.add(new RefactoringDAO(refactoring));
         }
     }
 
     /**
-     * return line ranges for structure expressions such as IF, FOR, WHILE, etc.
+     * return line ranges for structure expressions such as IF, FOR, WHILE in the whole file etc.
      * @param editScriptStorer
      * @param stats
      * @return
      */
     private SrcDstRange extractStructureRanges(ControlStructureType type, EditScriptStorer editScriptStorer, ProcessingStats stats){
-        SrcDstRange structureRanges = new SrcDstRange();
-        structureRanges = editScriptStorer.getStructureRange(type);
-        if(type.equals(ControlStructureType.IF)){
-            stats.numberOfConditionalExpression[0] +=
-                    coveredLength(structureRanges.getSrcRange());
-            stats.numberOfConditionalExpression[1] +=
-                    coveredLength(structureRanges.getDstRange());
-        }
-        // TODO: structure ranges for FOR && While
+        SrcDstRange structureRanges = editScriptStorer.getStructureRange(type);
+        stats.updateNumberOfStructureExpressions(type, structureRanges);
         return structureRanges;
     }
 
@@ -519,10 +633,11 @@ public class MineCommand implements Callable<Integer> {
      * Process actions from the diff and collect microchanges and affected ranges
      */
     private ChangeProcessingResult processDiffActions(EditScript editScript,Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions,
-                                                 DiffEditScriptWithSource diffScript,EditScriptStorer editScriptStorer, Map<String, RenameRefactoring>  renamingMap,
-                                                 SrcDstRange srcDstLineRangeOfIf,ActionLocator actionLocator, PatternMatcher patternMatcherGumTree, ProcessingStats stats){
+                                                 EditScriptStorer editScriptStorer, Map<ControlStructureType, SrcDstRange> structureRanges,ActionLocator actionLocator,
+                                                      PatternMatcher patternMatcherGumTree, ProcessingStats stats){
         List<MicroChange> microChangesPerFile = new LinkedList<>();
-        SrcDstRange treeActionPerFile = new SrcDstRange();
+        SrcDstRange treeActionPerFile = new SrcDstRange(); // record action ranges that intersect with structure changes
+        Map<ControlStructureType, SrcDstRange> structureActionRanges = new HashMap<>();
         log.info("# of actions {}", editScript.size());
         for (Action a : editScript) {
             // mine micro-changes
@@ -535,20 +650,32 @@ public class MineCommand implements Callable<Integer> {
 
             if (!microChanges.isEmpty()) {
                 microChangesPerFile.addAll(microChanges);
-                stats.numberMicroChangeContainedConditionRelatedAction += 1;
+                stats.numberMicroChangeContainedStructureRelatedAction += 1;
             }
 
-            if (ActionStatus.hasIntersection(treeActionRanges, srcDstLineRangeOfIf)) {
-                stats.numberTotalConditionRelatedActionNumber += 1;
-                treeActionPerFile.getSrcRange().addAll(treeActionRanges.getSrcRange());
-                treeActionPerFile.getDstRange().addAll(treeActionRanges.getDstRange());
+
+            // if tree action overlapped with IF-Statement, record it in treeActionPerFile
+//            if (ActionStatus.hasIntersection(treeActionRanges, srcDstLineRangeOfIf)) {
+//                stats.numberTotalConditionRelatedActionNumber += 1;
+//                treeActionPerFile.getSrcRange().addAll(treeActionRanges.getSrcRange());
+//                treeActionPerFile.getDstRange().addAll(treeActionRanges.getDstRange());
+//            }
+
+            // if tree action overlapped with structure expressions, record it in treeActionPerFile
+            for (ControlStructureType type : structureRanges.keySet()) {
+                SrcDstRange structureActionRange = structureRanges.get(type);
+                if (structureActionRange!=null && ActionStatus.hasIntersection(treeActionRanges, structureActionRange)) {
+                    stats.updateStructureActionNumber(type, 1);
+                    treeActionPerFile.getSrcRange().addAll(treeActionRanges.getSrcRange());
+                    treeActionPerFile.getDstRange().addAll(treeActionRanges.getDstRange());
+                }
             }
 
             // Collect rename contained actions range
-            collectRenameContainedActionsRange(a, renamingMap, treeActionRanges, diffScript);
+//            collectRenameContainedActionsRange(a, renamingMap, treeActionRanges, diffScript);
 
         }
-
+        log.info("(added) treeActionPerFile {}", treeActionPerFile);
         return new ChangeProcessingResult(microChangesPerFile, treeActionPerFile);
 
     }
@@ -898,6 +1025,13 @@ public class MineCommand implements Callable<Integer> {
     }
 
 
+    public static void  logStructureChangeLength(Map<ControlStructureType, int[]> structureChangeLength){
+        for (ControlStructureType type : structureChangeLength.keySet()) {
+            log.info("Structure change src length of {} is {}", type, structureChangeLength.get(type)[0]);
+            log.info("Structure change dst length of {} is {}", type, structureChangeLength.get(type)[1]);
+        }
+    }
+
     public static void logTreeDALines(int[] totalADCodeChangeLines) {
         log.info("total tree removed lines: {}", totalADCodeChangeLines[0]);
         log.info("total tree added lines: {}", totalADCodeChangeLines[1]);
@@ -957,9 +1091,9 @@ public class MineCommand implements Callable<Integer> {
                 numberMicroChangeContainedAction, numberTotalActionNumber);
     }
 
-    public static void logConditionalExpressionChangeContainedCommit(
+    public static void logStructureExpressionChangeContainedCommit(
             int numberOfConditionalExpression) {
-        log.info("Number of conditional-expression-change contained commit: {}",
+        log.info("Number of structure-expression-change contained commit: {}",
                 numberOfConditionalExpression);
     }
 
