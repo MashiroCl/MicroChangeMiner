@@ -123,7 +123,6 @@ public class EditScriptExtractor {
                 }
             }
             log.info("Edit script computed, {} methods processed", processedMethodCount);
-            return res;
         }
         catch (IOException e){
             log.error(e.getMessage(), e);
@@ -147,7 +146,6 @@ public class EditScriptExtractor {
                     res.put(commit.getId().name(), diffEditScripts);
                 }
             }
-            return res;
         }
         catch (IOException e){
             log.error(e.getMessage(), e);
