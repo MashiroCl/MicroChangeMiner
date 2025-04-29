@@ -235,7 +235,6 @@ public class MineCommand implements Callable<Integer> {
 
         List<Refactoring> refactoringList = refMap.getOrDefault(commitID, new LinkedList<>());
         Map<String, RenameRefactoring> renamingMap = extractRenameRefactorings(refactoringList);
-        log.info("(added)renamingMap {}", renamingMap);
 
         for (DiffEditScriptWithSource diffScript : diffScripts) {
             stats.numberOfFilesProcessed++;
@@ -393,15 +392,15 @@ public class MineCommand implements Callable<Integer> {
 //                structureChangeMicroChange, treeDiffStructureChangeRefactoring, diffScript);
 
         // Calculate combined range of microchanges and refactorings
-        log.info("(added) treeDiffStructureChangeRefactoring {}", treeDiffStructureChangeRefactoring.get(ControlStructureType.FOR));
-        log.info("(added) treeDiffStructureChangeMicroChange {}", treeDiffStructureChangeMicroChange.get(ControlStructureType.FOR));
+        log.debug("(added) treeDiffStructureChangeRefactoring {}", treeDiffStructureChangeRefactoring.get(ControlStructureType.FOR));
+        log.debug("(added) treeDiffStructureChangeMicroChange {}", treeDiffStructureChangeMicroChange.get(ControlStructureType.FOR));
         Map<ControlStructureType, SrcDstRange> microChangeUnionRefRange = new HashMap<>();
         for (ControlStructureType type : structureRanges.keySet()) {
             microChangeUnionRefRange.put(type, calculateMicroChangeUnionRefRange(treeDiffStructureChangeMicroChange.get(type),
                     treeDiffStructureChangeRefactoring.get(type), diffScript));
         }
 
-        log.info("(added) structureChangeUnionRefRange {}", microChangeUnionRefRange);
+        log.debug("(added) structureChangeUnionRefRange {}", microChangeUnionRefRange);
 
         // Update statistics
         updateStatistics(treeActionRange, structureRanges, treeDiffStructureChangeMicroChange,
@@ -446,8 +445,8 @@ public class MineCommand implements Callable<Integer> {
         structureChangeMicroChange.keySet().forEach(type -> structureChangeUnionRefRangeSrc.addAll(structureChangeUnionRefRange.get(type).getSrcRange()));
         structureChangeMicroChange.keySet().forEach(type -> structureChangeUnionRefRangeDst.addAll(structureChangeUnionRefRange.get(type).getDstRange()));
 
-        log.info("(added) structureChangeUnionRefRangeSrc {}", structureChangeUnionRefRangeSrc);
-        log.info("(added) structureChangeUnionRefRangeSrc length {}", coveredLength(structureChangeUnionRefRangeSrc));
+        log.debug("(added) structureChangeUnionRefRangeSrc {}", structureChangeUnionRefRangeSrc);
+        log.debug("(added) structureChangeUnionRefRangeSrc length {}", coveredLength(structureChangeUnionRefRangeSrc));
         stats.mrADChangeCoveredLines[0] += coveredLength(structureChangeUnionRefRangeSrc);
         stats.mrADChangeCoveredLines[1] += coveredLength(structureChangeUnionRefRangeDst);
 
@@ -678,7 +677,7 @@ public class MineCommand implements Callable<Integer> {
             }
 
         }
-        log.info("(added) treeActionPerFile {}", treeActionPerFile);
+        log.debug("(added) treeActionPerFile {}", treeActionPerFile);
         return new ChangeProcessingResult(microChangesPerFile, treeActionPerFile);
 
     }
