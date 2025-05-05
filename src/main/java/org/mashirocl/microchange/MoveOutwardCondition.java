@@ -26,14 +26,14 @@ public class MoveOutwardCondition implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
         if(action.getName().equals("move-tree")){
-            Tree beforeMoveConditionalNode = NodePosition.isConditionExpression(action.getNode());
+            Tree beforeMoveConditionalNode = NodePosition.isIfConditionExpression(action.getNode());
             // before move, it is in conditional expression
             if(beforeMoveConditionalNode!=null){
                 Tree beforeMoveIfNode = beforeMoveConditionalNode.getParent();
                 Tree beforeMoveLowerLevelIfNode = NodePosition.isInIf(beforeMoveIfNode.getParent());
                 if(mappings.containsKey(action.getNode()) && beforeMoveLowerLevelIfNode!=null){
                     // after move, it is in a conditional expression in a lower logical level than the original one
-                    Tree afterMoveConditionalNode = NodePosition.isConditionExpression(mappings.get(action.getNode()));
+                    Tree afterMoveConditionalNode = NodePosition.isIfConditionExpression(mappings.get(action.getNode()));
                     if(afterMoveConditionalNode!=null){
                         Tree afterMoveIfNode = NodePosition.isInIf(afterMoveConditionalNode);
                         return (afterMoveIfNode!=null && mappings.containsKey(beforeMoveLowerLevelIfNode) && mappings.get(beforeMoveLowerLevelIfNode).equals(afterMoveIfNode));
@@ -49,12 +49,12 @@ public class MoveOutwardCondition implements MicroChangePattern{
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
         // left side conditional expression
-        Tree beforeMoveConditionalNode = NodePosition.isConditionExpression(action.getNode());
+        Tree beforeMoveConditionalNode = NodePosition.isIfConditionExpression(action.getNode());
         Range<Integer> movedCondition = RangeOperations.toLineRange(
                 RangeOperations.toRange(beforeMoveConditionalNode), editScriptStorer.getSrcCompilationUnit()
         );
         // right side conditional expression
-        Tree afterMoveConditionalNode = NodePosition.isConditionExpression(mappings.get(action.getNode()));
+        Tree afterMoveConditionalNode = NodePosition.isIfConditionExpression(mappings.get(action.getNode()));
         Range<Integer> dstCondition = RangeOperations.toLineRange(
                 RangeOperations.toRange(afterMoveConditionalNode),editScriptStorer.getDstCompilationUnit());
 

@@ -27,9 +27,9 @@ public class RemoveConjunctOrDisjunct implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
         if(action.getName().equals("move-tree")){
-            Tree leftConditionExpression = NodePosition.isConditionExpression(action.getNode());
+            Tree leftConditionExpression = NodePosition.isIfConditionExpression(action.getNode());
             if(leftConditionExpression!=null){
-                if(mappings.containsKey(action.getNode()) &&  NodePosition.isConditionExpression(mappings.get(action.getNode()))!=null){
+                if(mappings.containsKey(action.getNode()) &&  NodePosition.isIfConditionExpression(mappings.get(action.getNode()))!=null){
                     for(Tree conditionNode: leftConditionExpression.getParent().getChild(0).getChildren()){
                         if(conditionNode.toString().contains("||") || conditionNode.toString().contains("&&")){
                             return nodeActions.containsKey(conditionNode) && nodeActions.get(conditionNode).stream().anyMatch(p->p.getName().contains("delete"));

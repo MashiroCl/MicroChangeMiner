@@ -37,7 +37,7 @@ public class UnwrapStatementFromConditional implements MicroChangePattern{
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
         if(!action.getName().equals("move-tree") || !mappings.containsKey(action.getNode()) || !action.getNode().isIsomorphicTo(mappings.get(action.getNode()))) return false;
         Tree leftIfNode = NodePosition.isInIf(action.getNode());
-        if(NodePosition.isConditionExpression(action.getNode())!=null) return false; //not in the conditional expression
+        if(NodePosition.isIfConditionExpression(action.getNode())!=null) return false; //not in the conditional expression
 
         return leftIfNode!=null && nodeActions.containsKey(leftIfNode) && nodeActions.get(leftIfNode).stream().anyMatch(a -> a.getName().equals("delete-tree") || a.getName().equals("delete-node"));
     }

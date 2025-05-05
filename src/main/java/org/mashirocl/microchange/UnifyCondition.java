@@ -2,12 +2,10 @@ package org.mashirocl.microchange;
 
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.tree.Tree;
-import com.google.common.collect.Range;
 import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 import org.mashirocl.microchange.common.NodePosition;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -28,10 +26,10 @@ public class UnifyCondition implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
         if(action.getName().equals("move-tree")){
-            Tree beforeMoveConditionNodeX = NodePosition.isConditionExpression(action.getNode());
+            Tree beforeMoveConditionNodeX = NodePosition.isIfConditionExpression(action.getNode());
             if(beforeMoveConditionNodeX!=null && mappings.containsKey(action.getNode())){
                 Tree beforeMoveIfNodeX = beforeMoveConditionNodeX.getParent();
-                Tree afterMoveConditionNodeY = NodePosition.isConditionExpression(mappings.get(action.getNode()));
+                Tree afterMoveConditionNodeY = NodePosition.isIfConditionExpression(mappings.get(action.getNode()));
               if(afterMoveConditionNodeY!=null){
                   // in the same logical level
                   if(mappings.containsKey(afterMoveConditionNodeY.getParent())){
@@ -57,13 +55,13 @@ public class UnifyCondition implements MicroChangePattern{
         SrcDstRange srcDstRange = new SrcDstRange();
         // left side
         //before move condition X
-        Tree beforeMoveConditionNodeX = NodePosition.isConditionExpression(action.getNode());
+        Tree beforeMoveConditionNodeX = NodePosition.isIfConditionExpression(action.getNode());
         srcDstRange.getSrcRange().add(
                 RangeOperations.toLineRange(
                         RangeOperations.toRange(beforeMoveConditionNodeX), editScriptStorer.getSrcCompilationUnit()
                 ));
         //before move condition Y
-        Tree afterMoveConditionNodeY = NodePosition.isConditionExpression(mappings.get(action.getNode()));
+        Tree afterMoveConditionNodeY = NodePosition.isIfConditionExpression(mappings.get(action.getNode()));
         Tree beforeMoveConditionY = mappings.get(afterMoveConditionNodeY.getParent()).getChild(0);
         srcDstRange.getSrcRange().add(
                 RangeOperations.toLineRange(
