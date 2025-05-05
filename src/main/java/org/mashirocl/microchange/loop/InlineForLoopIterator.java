@@ -6,20 +6,22 @@ import org.mashirocl.editscript.EditScriptStorer;
 import org.mashirocl.location.RangeOperations;
 import org.mashirocl.microchange.MicroChangePattern;
 import org.mashirocl.microchange.SrcDstRange;
+import org.mashirocl.microchange.common.NodePosition;
 
 import java.util.List;
 import java.util.Map;
 
 /**
  * @author mashirocl@gmail.com
- * @since 2025/04/19 10:53
+ * @since 2025/04/19 16:11
  */
-public class ConvertForEachToFor implements MicroChangePattern {
+public class InlineForLoopIterator implements MicroChangePattern {
     /**
-     * The foreach-loop is replaced by a for
      *
-     * A child node (foreach-body) is moved from a foreach-statement to be the child of a for-statement,
-     * the original foreach-statement is removed
+     * Inline for-loop variable, e.g. int i=0 in the for(int i=0;i<n;i++)
+     *
+     * A variable declaration/ initialization is moved from outside into the Initialization of a for loop header
+     *
      */
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
@@ -28,25 +30,22 @@ public class ConvertForEachToFor implements MicroChangePattern {
 
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions) {
+        // move-tree, the node is originally not the descendant of a loop header, and then it is moved into the loop header to be the initialization
         return action.getName().equals("move-tree")
-                && action.getNode().getParent().getType().name.equals("EnhancedForStatement")
-                && nodeActions.containsKey(action.getNode())
-                && nodeActions.get(action.getNode().getParent()).stream().anyMatch(p->p.getName().contains("delete"))
+                && NodePosition.isDescendantOfForLoopHeader(action.getNode())==null
                 && mappings.containsKey(action.getNode())
-                && mappings.get(action.getNode()).getParent().getType().name.equals("ForStatement");
+                && NodePosition.isForLoopInitialization(mappings.get(action.getNode()));
     }
 
     @Override
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
-        // we calculate the coverage of only loop header
         SrcDstRange srcDstRange = new SrcDstRange();
-        // foreach-loop header
-        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode().getParent()),
-                editScriptStorer.getDstCompilationUnit()));
+        // src range, is out of for-statement
+        srcDstRange.getSrcRange().add(RangeOperations.toLineRange(RangeOperations.toRange(action.getNode()),
+                editScriptStorer.getSrcCompilationUnit()));
 
         //for-loop header
-        Tree forBodyNode = mappings.get(action.getNode());
-        Tree forLoopHeader = forBodyNode.getParent();
+        Tree forLoopHeader = mappings.get(action.getNode());
         srcDstRange.getDstRange().add(RangeOperations.toLineRange(RangeOperations.toRange(forLoopHeader),
                 editScriptStorer.getDstCompilationUnit()));
         return srcDstRange;

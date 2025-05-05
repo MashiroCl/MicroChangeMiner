@@ -14,7 +14,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2025/04/20 14:41
  */
-public class RenameLoopInitializer implements MicroChangePattern {
+public class RenameLoopIterator implements MicroChangePattern {
     /**
      * The name of loop initializer is changed (e.g. for(int i=0;i<n;i++) -> for(int j =0; j<n;j++))
      *

@@ -14,7 +14,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2025/04/19 16:40
  */
-public class ChangeLoopInitializerType implements MicroChangePattern {
+public class ChangeLoopIteratorType implements MicroChangePattern {
     /**
      * The type of loop initializer is changed (e.g. for(int i=0;i<n;i++) -> for(Integer i =0; i<n;i++))
      *

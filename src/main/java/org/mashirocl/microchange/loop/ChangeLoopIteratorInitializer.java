@@ -14,7 +14,7 @@ import java.util.Map;
  * @author mashirocl@gmail.com
  * @since 2025/04/20 15:13
  */
-public class ChangeLoopInitializationExpression implements MicroChangePattern {
+public class ChangeLoopIteratorInitializer implements MicroChangePattern {
     /**
      * The initialization expression of loop initializer is changed (e.g. for(int i=0;i<n;i++) -> for(int i =init(); i<n;i++))
      *

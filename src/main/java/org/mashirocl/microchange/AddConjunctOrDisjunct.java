@@ -21,7 +21,7 @@ public class AddConjunctOrDisjunct implements MicroChangePattern{
     @Override
     public boolean matchConditionGumTree(Action action, Map<Tree, Tree> mappings) {
       return action.getName().equals("insert-node")
-              && NodePosition.isConditionExpression(action.getNode())!=null
+              && NodePosition.isIfConditionExpression(action.getNode())!=null
               && (action.getNode().getLabel().equals("||")||action.getNode().getLabel().equals("&&"));
     }
 
@@ -34,7 +34,7 @@ public class AddConjunctOrDisjunct implements MicroChangePattern{
     public SrcDstRange getSrcDstRange(Action action, Map<Tree, Tree> mappings, Map<Tree, List<Action>> nodeActions, EditScriptStorer editScriptStorer) {
         SrcDstRange srcDstRange = new SrcDstRange();
         // condition expression on the right side
-        Tree rightConditionExpression = NodePosition.isConditionExpression(action.getNode());
+        Tree rightConditionExpression = NodePosition.isIfConditionExpression(action.getNode());
 
         // left side condition expression
         if(mappings.containsKey(rightConditionExpression)){
