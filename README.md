@@ -23,7 +23,13 @@ $ cd MicroChangeMiner
 $ ./gradlew shadowJar
 ```
 
-## How to mine micro-changes from a repository
+## How to mine micro-changes on an example repository
+Mine micro-changes on example repository [mbassador](https://github.com/bennidi/mbassador)
+```shell
+$ make example-analysis
+```
+
+## How to mine micro-changes from a repository with commands step by step
 ### 1. Convert the target git repository to method-level repository
 ```shell
 $ java -jar <git-stein_path/build/libs/git-stein.jar> <target_repo_path> -o <output_repo_path> @historage-jdt --no-original --no-classes --no-fields --parsable --mapping 
