@@ -18,7 +18,7 @@ import org.mashirocl.match.ActionStatus;
 import org.mashirocl.match.PatternMatcher;
 import org.mashirocl.match.PatternMatcherGumTree;
 import org.mashirocl.microchange.*;
-import org.mashirocl.microchange.loop.*;
+// import org.mashirocl.microchange.loop.*;
 import org.mashirocl.refactoringminer.*;
 import org.mashirocl.textualdiff.TextualDiff;
 import org.mashirocl.util.CSVWriter;
@@ -79,33 +79,34 @@ public class MineCommand implements Callable<Integer> {
 
 
     public static void loadMicroChanges(PatternMatcher patternMatcherGumTree) {
-         patternMatcherGumTree.addMicroChange(new AddConjunctOrDisjunct());
-         patternMatcherGumTree.addMicroChange(new WrapStatementInBlock());
-         patternMatcherGumTree.addMicroChange(new AdjustConditionBoundary());
-         patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
-         patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
-         patternMatcherGumTree.addMicroChange(new ConditionalToExpression());
-         patternMatcherGumTree.addMicroChange(new WrapStatementInConditional());
-         patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
-         patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
-         patternMatcherGumTree.addMicroChange(new UnwrapStatementFromConditional());
-         patternMatcherGumTree.addMicroChange(new AddConditionalStatement());
-         patternMatcherGumTree.addMicroChange(new MoveInwardCondition());
-         patternMatcherGumTree.addMicroChange(new MoveOutwardCondition());
-         patternMatcherGumTree.addMicroChange(new RemoveConditionalStatement());
-         patternMatcherGumTree.addMicroChange(new UnwrapStatementFromBlock());
-         patternMatcherGumTree.addMicroChange(new RemoveElse());
-         patternMatcherGumTree.addMicroChange(new SwapThenAndElse());
-         patternMatcherGumTree.addMicroChange(new ReverseCondition());
-         patternMatcherGumTree.addMicroChange(new RemoveConjunctOrDisjunct());
-         patternMatcherGumTree.addMicroChange(new FlipLogicOperator());
-         patternMatcherGumTree.addMicroChange(new ConvertForToWhile());
-         patternMatcherGumTree.addMicroChange(new ConvertForEachToFor());
-         patternMatcherGumTree.addMicroChange(new AddLoopInitializer());
-         patternMatcherGumTree.addMicroChange(new ChangeLoopInitializerType());
-         patternMatcherGumTree.addMicroChange(new RenameLoopInitializer());
-         patternMatcherGumTree.addMicroChange(new ChangeLoopInitializationExpression());
-//        patternMatcherGumTree.addMicroChange(new ChangeLoopCondition());
+        patternMatcherGumTree.addMicroChange(new AddConjunctOrDisjunct());
+        patternMatcherGumTree.addMicroChange(new WrapStatementInBlock());
+        patternMatcherGumTree.addMicroChange(new AdjustConditionBoundary());
+        patternMatcherGumTree.addMicroChange(new ConditionalToBooleanReturn());
+        patternMatcherGumTree.addMicroChange(new ConditionalToSwitch());
+        patternMatcherGumTree.addMicroChange(new ConditionalToExpression());
+        patternMatcherGumTree.addMicroChange(new WrapStatementInConditional());
+        patternMatcherGumTree.addMicroChange(new ExtendIfWithElse());
+        patternMatcherGumTree.addMicroChange(new ExtendElseWithIf());
+        patternMatcherGumTree.addMicroChange(new UnwrapStatementFromConditional());
+        patternMatcherGumTree.addMicroChange(new AddConditionalStatement());
+        patternMatcherGumTree.addMicroChange(new MoveInwardCondition());
+        patternMatcherGumTree.addMicroChange(new MoveOutwardCondition());
+        patternMatcherGumTree.addMicroChange(new RemoveConditionalStatement());
+        patternMatcherGumTree.addMicroChange(new UnwrapStatementFromBlock());
+        patternMatcherGumTree.addMicroChange(new RemoveElse());
+        patternMatcherGumTree.addMicroChange(new SwapThenAndElse());
+        patternMatcherGumTree.addMicroChange(new ReverseCondition());
+        patternMatcherGumTree.addMicroChange(new RemoveConjunctOrDisjunct());
+        patternMatcherGumTree.addMicroChange(new FlipLogicOperator());
+        //  patternMatcherGumTree.addMicroChange(new ConvertForToWhile());
+        //  patternMatcherGumTree.addMicroChange(new ConvertForEachToFor());
+        //  patternMatcherGumTree.addMicroChange(new InlineForLoopIterator());
+        // patternMatcherGumTree.addMicroChange(new AddForLoopIncrement());
+        // patternMatcherGumTree.addMicroChange(new RemoveForLoopIncrement());
+        // patternMatcherGumTree.addMicroChange(new UpdateLoopIncrement());
+        // patternMatcherGumTree.addMicroChange(new UpdateLoopCondition());
+        // patternMatcherGumTree.addMicroChange(new RenameLoopIterator());
         log.info("{}", patternMatcherGumTree.listLoadedMicroChanges());
 
         // patternMatcherGumTree.addMicroChange(new UnifyCondition());
@@ -121,11 +122,11 @@ public class MineCommand implements Callable<Integer> {
     private Map<String, List<DiffEditScriptWithSource>> extractEditScripts(RepositoryAccess ra,
             DiffFormatter diffFormatter){
         diffFormatter.setRepository(ra.getRepository());
-         Map<String, List<DiffEditScriptWithSource>> editScripts =
-         EditScriptExtractor.getEditScript(ra, diffFormatter);
-//        Map<String, List<DiffEditScriptWithSource>> editScripts =
-//                EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter,
-//                        "2a0b607dca280521e9f6fd2ab2dfa104a4366e7b");
+//         Map<String, List<DiffEditScriptWithSource>> editScripts =
+//         EditScriptExtractor.getEditScript(ra, diffFormatter);
+        Map<String, List<DiffEditScriptWithSource>> editScripts =
+                EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter,
+                        "880ca8480e9f93b12e37d0d3c5a60e1740903d23");
         log.info("Edit Script obtained for {} commits", editScripts.size());
         return editScripts;
     }
@@ -208,7 +209,7 @@ public class MineCommand implements Callable<Integer> {
         ActionLocator actionLocator = new ActionLocator();
 
         int count = 0;
-        int total_count = commitEditscriptMap.keySet().size();
+        int total_count = commitEditscriptMap.size();
         log.info("Number of commits to be processed: {}", commitEditscriptMap.size());
 
         for (String commitID : commitEditscriptMap.keySet()) {
@@ -405,7 +406,6 @@ public class MineCommand implements Callable<Integer> {
         // Update statistics
         updateStatistics(treeActionRange, structureRanges, treeDiffStructureChangeMicroChange,
                 microChangeUnionRefRange, stats);
-
         // Process uncovered ranges
         processUncoveredRanges(commitID, diffScript, treeActionRange, structureRanges,
                 microChangeUnionRefRange, repositoryName, notCovered, methodLevelConvertor);
