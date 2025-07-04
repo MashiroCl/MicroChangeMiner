@@ -48,4 +48,4 @@ mine_micro_change_example:
 example-analysis:
 	git-stein refactoring-miner build prepare_directory clone_example_repo convert_example_to_method_level commit_map_example mine_refactoring_example mine_micro_change_example
 
-.PHONY: git-stein refactoring-miner build prepare_directory clone_example_repo convert_example_to_method_level commit_map_example mine_refactoring_example mine_micro_change_example
+.PHONY: git-stein refactoring-miner build prepare_directory clone_example_repo convert_example_to_method_level commit_map_example mine_refactoring_example mine_micro_change_example make-analysis
