@@ -33,8 +33,8 @@ public class RefactoringMiner {
     public void mine(Path repoPath, String commitID, Path output){
         try{
             ProcessBuilder processBuilder = new ProcessBuilder();
-            processBuilder.command("./RefactoringMiner", "-c", repoPath.toString(), commitID, "-json", output.resolve(commitID+".json").toString());
-            Process process = processBuilder.directory(new File(minerPath)).start();
+            processBuilder.command("./"+minerPath, "-c", repoPath.toString(), commitID, "-json", output.resolve(commitID+".json").toString());
+            Process process = processBuilder.start();
             int exitValue = process.waitFor();
             if(exitValue!=0){
                 log.error("Refactoring mining on {} exits with non-zero value", commitID);
