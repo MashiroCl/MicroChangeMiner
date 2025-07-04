@@ -94,18 +94,20 @@ public class YourMicroChange implements MicroChangePattern{
 You can refer to the complete catalog of micro-change in [Catalog](https://github.com/salab/Micro-Change-Catalog/).
 
 ## Publications
-(Formal doi to be added)
-
 The following article includes the details of the micro-changes and the miner.
 We encourage contributions to the micro-changes or the miner.
 
 Lei Chen, Michele Lanza, Shinpei Hayashi: [''Understanding Code Change with Micro-Changes'']( https://www.arxiv.org/abs/2409.09923). In Proceedings of the 40th IEEE International Conference on Software Maintenance and Evolution (ICSME 2024). Flagstaff, AZ, USA, oct, 2024.
 ```
-@article{chen2024understanding,
+@inproceedings{chen2024understanding,
   title={Understanding Code Change with Micro-Changes},
   author={Chen, Lei and Lanza, Michele and Hayashi, Shinpei},
-  journal={arXiv preprint arXiv:2409.09923},
-  year={2024}
-}
+  booktitle={Proceedings of the 40th International Conference on Software Maintenance and Evolution },
+  pages={363--374},
+  year={2024},
+  keywords = {Software maintenance;Codes;Natural languages;Focusing;Detectors;Programming;Cognitive science;Logic},
+  doi = {10.1109/ICSME58944.2024.00041},
+  url = {https://doi.ieeecomputersociety.org/10.1109/ICSME58944.2024.00041},
+  organization={IEEE}
 }
 ```
