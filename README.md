@@ -32,16 +32,16 @@ $ java -jar <git-stein_path/build/libs/git-stein.jar> <target_repo_path> -o <out
 ### 2. Get commit-map
 Obtain a map from a method-level repository whose key is the original repository sha1, value is the corresponding method-level repository sha1, i.e. <original_sha1:method-level_sha1>
 ```shell
-$ java -jar build/libs/miner-1.0-SNAPSHOT-all.jar commitMap <repo_path/.git> -o <output_jsonfile.json>
+$ java -jar build/libs/miner-1.0-SNAPSHOT-all.jar commitMap -p <method_level_repo_path/.git> -o <output_jsonfile.json>
 ```
 
 ### 3. Mine refactorings
 ```shell
-$ java -jar  <RefactoringMiner_path/build/libs/miner-1.0-SNAPSHOT-all.jar> refmine <original_repo_path> <output_path> >./runLog/<repo_name>_rm.log
+$ java -jar build/libs/miner-1.0-SNAPSHOT-all.jar refmine <RefactoringMiner_path>  <original_repo_path> <output_dir> >./runLog/<repo_name>_rm.log
 ```
 ### 4. Mine micro-changes
 ```shell
-$ java -jar  build/libs/miner-1.0-SNAPSHOT-all.jar mine <method_level_repo_path> <output_json_path.json> --csv <output_csv_path.csv> --map <commit_map_path> --refactoring <mined_refactoring_directory> --original <original_repo_path/.git> --notCoveredPath <output_path_for_uncovered> >runLog/<repo_name>.log 
+$ java -jar  build/libs/miner-1.0-SNAPSHOT-all.jar mine <method_level_repo_path/.git> <output_json_path.json> --csv <output_csv_path.csv> --map <commit_map_path> --refactoring <mined_refactoring_directory> --original <original_repo_path/.git> --notCoveredPath <output_path_for_uncovered> >runLog/<repo_name>.log 
 ```
 e.g. for repository `mbassador`
 ```shell
