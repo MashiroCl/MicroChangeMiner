@@ -122,11 +122,11 @@ public class MineCommand implements Callable<Integer> {
     private Map<String, List<DiffEditScriptWithSource>> extractEditScripts(RepositoryAccess ra,
             DiffFormatter diffFormatter){
         diffFormatter.setRepository(ra.getRepository());
-//         Map<String, List<DiffEditScriptWithSource>> editScripts =
-//         EditScriptExtractor.getEditScript(ra, diffFormatter);
         Map<String, List<DiffEditScriptWithSource>> editScripts =
-                EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter,
-                        "880ca8480e9f93b12e37d0d3c5a60e1740903d23");
+        EditScriptExtractor.getEditScript(ra, diffFormatter);
+        // Map<String, List<DiffEditScriptWithSource>> editScripts =
+                // EditScriptExtractor.getEditScriptForSingleCommit(ra, diffFormatter,
+                        // "880ca8480e9f93b12e37d0d3c5a60e1740903d23");
         log.info("Edit Script obtained for {} commits", editScripts.size());
         return editScripts;
     }
