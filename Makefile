@@ -44,8 +44,6 @@ mine_refactoring_example:
 mine_micro_change_example:
 	java -jar  $(MINER_JAR) mine $(METHOD_LEVEL_DIR)/mbassador/.git $(MICRO_CHANGE_JSON_PATH)/mbassador.json --csv $(MICRO_CHNANGE_CSV_PATH)/mbassador.csv --map  $(COMMITMAP_DIR)/mbassador.json --refactoring $(REFACTORING_DIR)/mbassador --original $(RAW_DIR)/mbassador/.git  --notCoveredPath  $(NOT_COVERED_PATH)/mbassador.json >runLog/mbassador.log 
 
-
-example-analysis:
-	git-stein refactoring-miner build prepare_directory clone_example_repo convert_example_to_method_level commit_map_example mine_refactoring_example mine_micro_change_example
-
 .PHONY: git-stein refactoring-miner build prepare_directory clone_example_repo convert_example_to_method_level commit_map_example mine_refactoring_example mine_micro_change_example make-analysis
+
+example-analysis: git-stein refactoring-miner build prepare_directory clone_example_repo convert_example_to_method_level commit_map_example mine_refactoring_example mine_micro_change_example
