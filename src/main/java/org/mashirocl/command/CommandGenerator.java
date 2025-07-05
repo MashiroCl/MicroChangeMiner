@@ -69,7 +69,7 @@ public class CommandGenerator {
         String originalRepoPath;
         String rmOutputDirectory;
         String notCoveredPath;
-        String localRefactoringMinerPath = "/Users/leichen/project/semantic_lifter/RefactoringMiner-3.0.4/bin/";
+        String localRefactoringMinerPath = "/Users/leichen/project/semantic_lifter/RefactoringMiner-3.0.4/bin/RefactoringMiner";
 
 
         String [] repos = new String[]{"mbassador","my-refactoring-toy-example","javapoet", "jfinal","android-demos","retrolambda", "zuul"};
@@ -126,7 +126,7 @@ public class CommandGenerator {
 
         //3/30 3 failed repos
         repos = new String[]{"jeromq", "dmix", "drill"};
-        String usiRefactoringMinerPath = "/evo/homes/leichen/project/SemanticLifter/RefactoringMiner-3.0.4/bin/";
+        String usiRefactoringMinerPath = "/evo/homes/leichen/project/SemanticLifter/RefactoringMiner-3.0.4/bin/RefactoringMiner";
 
         //4/4 why-we-refactor - 3/30.dataset
         repos = new String[]{"MPS", "liferay-plugins", "neo4j", "camel",
@@ -196,7 +196,7 @@ public class CommandGenerator {
             String titanMapPath = "/home/salab/chenlei/semantic_lifter/mine/mined/commitMap/"+r+".json";
             String methodLevelRepoPath = "/home/salab/chenlei/semantic_lifter/mine/parsable_method_level/"+r;
             String refactoringOutputDirectory = "/home/salab/chenlei/semantic_lifter/mine/refactoring/"+r;
-            String titanRefactoringMinerPath = "/home/salab/chenlei/semantic_lifter/mine/RefactoringMiner-3.0.4/bin";
+            String titanRefactoringMinerPath = "/home/salab/chenlei/semantic_lifter/mine/RefactoringMiner-3.0.4/bin/RefactoringMiner";
             String titanGitStein = "/home/salab/chenlei/semantic_lifter/mine/git-stein/build/libs";
 
             String titanCsvOutputPath = "/home/salab/chenlei/semantic_lifter/mine/mined/minedCSV/"+r+".csv";
