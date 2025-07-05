@@ -1,6 +1,6 @@
 # Micro-Change Miner
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
-[![Build Status](https://github.com/MashiroCl/MicroChangeMiner/actions/workflows/build.yml/badge.svg)](https://github.com/MashiroCl/MicroChangeMiner/actions)
+[![Build Status](https://github.com/MashiroCl/MicroChangeMiner/actions/workflows/ci.yml/badge.svg)](https://github.com/MashiroCl/MicroChangeMiner/actions)
 [![Release](https://img.shields.io/github/v/release/MashiroCl/MicroChangeMiner.svg)](https://github.com/MashiroCl/MicroChangeMiner/releases)
 
 This is the repository for Micro-change Miner.
